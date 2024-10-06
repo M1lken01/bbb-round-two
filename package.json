@@ -1,0 +1,31 @@
+{
+  "name": "bbb-round-two",
+  "version": "1.0.0",
+  "scripts": {
+    "build:css": "tailwindcss -i ./src/styles/tailwind.css -o ./dist/styles/global.css",
+    "build:assets": "node bundle.js",
+    "build:html": "node build.js",
+    "build:scripts": "tsc",
+    "build": "npm run build:assets && npm run build:html && npm run build:scripts && npm run build:css"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "autoprefixer": "^10.4.20",
+    "fs-extra": "^11.2.0",
+    "postcss": "^8.4.47",
+    "tailwindcss": "^3.4.12"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/M1lken01/bbb-round-two.git"
+  },
+  "author": "m1lk3n01",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/M1lken01/bbb-round-two/issues"
+  },
+  "homepage": "https://github.com/M1lken01/bbb-round-two#readme"
+}

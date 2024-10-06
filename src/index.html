@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="hu">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Feladatok</title>
+    <link rel="shortcut icon" href="./imgs/favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="./styles/global.css" />
+    <script src="./scripts/common.js" defer></script>
+    <script src="./scripts/game.js" defer></script>
+  </head>
+  <body data-darkmode="false">
+    <header class="flex text-white bg-zinc-900">
+      <a class="p-8 hover:text-zinc-400" href="index.html">Játék</a>
+    </header>
+    <div class="flex flex-col justify-center flex-1 m-8">
+      <div class="flex flex-col items-center justify-center gap-4">
+        <div>
+          <h1 class="text-6xl font-bold">Játék</h1>
+        </div>
+        <div class="flex gap-4">
+          <button class="text-3xl button">Start</button>
+        </div>
+      </div>
+      <div class="flex flex-col items-center justify-center">
+        <div id="game" class="grid grid-cols-12 gap-1 grid-rows-12 w-fit">grid</div>
+      </div>
+    </div>
+    <footer class="flex flex-col items-center justify-center p-16 text-white bg-zinc-900">
+      <p>
+        <button onclick="toggleDarkmode()"><img src="./imgs/moon.png" alt="darkmode" /></button>
+      </p>
+      <p>&copy; 2024 M&amp;M. Minden jog fenntartva.</p>
+      <p>Készítette: M&amp;M | <a href="https://github.com/M1lken01/bbb-round-two" class="link">source</a></p>
+    </footer>
+  </body>
+</html>

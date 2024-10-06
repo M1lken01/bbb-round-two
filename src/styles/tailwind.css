@@ -1,0 +1,91 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply flex flex-col min-h-screen bg-gray-100;
+}
+
+[data-darkmode='true'] {
+  @apply text-white bg-zinc-800;
+}
+
+.team > div > img {
+  @apply mx-auto mb-2 rounded-full;
+  width: 150px;
+  height: 150px;
+  aspect-ratio: 1/1;
+}
+.team > div > h2 {
+  @apply text-lg font-semibold;
+}
+.team > div > button {
+  @apply px-4 py-2 mt-2 text-red-700 rounded hover:text-red-900;
+}
+.team > div > p {
+  @apply mt-2;
+}
+
+section {
+  @apply w-full p-6 bg-white rounded-lg shadow-md md:w-3/4;
+}
+
+[data-darkmode='true'] section {
+  @apply bg-zinc-900;
+}
+
+input {
+  @apply w-full px-3 py-2 border rounded focus:outline-none focus:ring-2 focus:ring-red-700 focus:border-red-700;
+}
+
+[data-darkmode='true'] input {
+  @apply bg-zinc-800 border-zinc-800;
+}
+
+label {
+  @apply block font-medium;
+}
+
+th,
+td {
+  @apply px-4 py-2 border;
+}
+
+[data-darkmode='true'] th,
+[data-darkmode='true'] td {
+  @apply border-zinc-800;
+}
+
+.button {
+  @apply px-4 py-2 text-white bg-red-700 rounded hover:bg-red-900;
+}
+
+.link {
+  @apply text-red-700 hover:underline;
+}
+
+footer img {
+  @apply w-5 h-5;
+  aspect-ratio: 1/1;
+}
+
+.easteregg {
+  font-weight: bold;
+  text-shadow: 0 0 5px #7f2fffa1, 0 0 10px #7f2fffa1, 0 0 15px #7f2fffa1, 0 0 20px #7f2fffa1;
+  background: linear-gradient(90deg, #7f2fff 30%, #e907a1, #7f2fff 70%);
+  background-size: 200% 200%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: gradient-animation 1.5s ease-in-out infinite;
+  -webkit-animation: gradient-animation 1.5s ease-in-out infinite;
+}
+
+@keyframes gradient-animation {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
