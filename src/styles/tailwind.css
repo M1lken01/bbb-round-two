@@ -10,22 +10,6 @@ body {
   @apply text-white bg-zinc-800;
 }
 
-.team > div > img {
-  @apply mx-auto mb-2 rounded-full;
-  width: 150px;
-  height: 150px;
-  aspect-ratio: 1/1;
-}
-.team > div > h2 {
-  @apply text-lg font-semibold;
-}
-.team > div > button {
-  @apply px-4 py-2 mt-2 text-red-700 rounded hover:text-red-900;
-}
-.team > div > p {
-  @apply mt-2;
-}
-
 section {
   @apply w-full p-6 bg-white rounded-lg shadow-md md:w-3/4;
 }
@@ -67,6 +51,15 @@ td {
 footer img {
   @apply w-5 h-5;
   aspect-ratio: 1/1;
+}
+
+#game > div {
+  @apply h-[64px] w-[64px] flex items-center justify-center bg-zinc-500 hover:brightness-75 hover:cursor-pointer text-xl bg-cover bg-no-repeat;
+  image-rendering: pixelated;
+}
+
+#player {
+  @apply flex w-full h-full bg-no-repeat bg-cover;
 }
 
 .easteregg {
