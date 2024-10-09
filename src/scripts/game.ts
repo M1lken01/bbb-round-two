@@ -104,12 +104,33 @@ function generateMap() {
       row.push(fruits);
 
       const cell = document.createElement('div');
-      cell.classList.add('h-20', 'w-20', 'flex', 'items-center', 'justify-center', 'bg-zinc-500', 'hover:border', 'hover:cursor-pointer', 'text-xl');
+      cell.classList.add(
+        'h-[64px]',
+        'w-[64px]',
+        'flex',
+        'items-center',
+        'justify-center',
+        'bg-zinc-500',
+        'hover:brightness-75',
+        'hover:cursor-pointer',
+        'text-xl',
+        'bg-cover',
+        'bg-no-repeat',
+      );
+      cell.style.imageRendering = 'pixelated';
+      cell.style.backgroundImage = `url('imgs/assets/grid.png')`;
       cell.setAttribute('data-x', x.toString());
       cell.setAttribute('data-y', y.toString());
-      cell.textContent = fruits.toString();
+      //cell.textContent = fruits.toString();
       cell.addEventListener('click', () => handleCellClick(x, y));
-
+      if (fruits === 0) {
+        cell.style.backgroundImage = `url('imgs/assets/bg${Math.floor(Math.random() * 3) + 1}.png')`;
+      } else {
+        const fruit = document.createElement('div');
+        fruit.classList.add('h-full', 'w-full', 'flex', 'bg-cover', 'bg-no-repeat');
+        fruit.style.backgroundImage = `url('imgs/assets/apple${fruits}.png')`;
+        cell.appendChild(fruit);
+      }
       gameMapElement.appendChild(cell);
     }
     gameMap.push(row);
@@ -126,9 +147,10 @@ function handleCellClick(x: number, y: number) {
 }
 
 function updateUI() {
-  movesLeftElement.textContent = (moveLimit - (player.getMoveCount() || 0)).toString();
-  fruitsCollectedElement.textContent = (player.getFruitsCollected() || 0).toString();
-
+  movesLeftElement.textContent = (player ? moveLimit - player.getMoveCount() : 0).toString();
+  fruitsCollectedElement.textContent = (player ? player.getFruitsCollected() : 0).toString();
+  const plr = document.getElementById('player') || document.createElement('div');
+  plr.remove();
   const cells = gameMapElement.children;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i] as HTMLElement;
@@ -136,9 +158,14 @@ function updateUI() {
 
     if (player && player.comparePos(pos)) {
       cell.style.backgroundColor = calculateColor(player.getMoveCount());
-      cell.textContent = '0'; // ! use gamemap to update values
-    } else {
-      cell.style.backgroundColor = 'color';
+      //cell.textContent = '0'; // ! use gamemap to update values
+      cell.innerHTML = '';
+      //cell.textContent = '0'; // ! use gamemap to update values
+      //const plr = document.createElement('div');
+      plr.id = 'player';
+      plr.classList.add('h-full', 'w-full', 'flex', 'bg-cover', 'bg-no-repeat');
+      plr.style.backgroundImage = `url('imgs/assets/player.png')`;
+      cell.appendChild(plr);
     }
   }
 }
