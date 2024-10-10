@@ -54,12 +54,16 @@ footer img {
 }
 
 #game > div {
-  @apply h-[64px] w-[64px] flex items-center justify-center bg-zinc-500 hover:brightness-75 hover:cursor-pointer text-xl bg-cover bg-no-repeat;
+  @apply h-[64px] w-[64px] flex items-center justify-center bg-zinc-500 hover:brightness-75 hover:cursor-pointer text-xl bg-cover bg-no-repeat relative;
   image-rendering: pixelated;
+}
+.sprite,
+#player {
+  @apply absolute flex w-full h-full bg-no-repeat bg-cover;
 }
 
 #player {
-  @apply flex w-full h-full bg-no-repeat bg-cover;
+  @apply z-50;
 }
 
 .easteregg {

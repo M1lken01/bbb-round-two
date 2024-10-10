@@ -3,7 +3,8 @@ const movesLeftElement = document.querySelector('#moves>span')!;
 const fruitsCollectedElement = document.querySelector('#score>span')!;
 //const restartButton = document.getElementById('restart-button')!;
 
-//let gameMap: number[][] = [];
+const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
+type Fruit = { flavor: (typeof fruitFlavors)[number]; amount: number };
 type Vec2 = { x: number; y: number };
 type LootWeights = { [key: number]: number };
 
@@ -20,7 +21,6 @@ function weightedRandom(probabilities: LootWeights): number {
 }
 
 function handleCellClick(x: number, y: number) {
-  console.log(`Cell clicked at: (${x}, ${y})`);
   if (!player) {
     player = new Player({ x, y });
     console.log(`Player created at: (${x}, ${y})`);
@@ -32,8 +32,8 @@ class Game {
   private width: number;
   private height: number;
   private moveLimit: number;
-  private map: number[][] = [];
-  private mapBlueprint: number[][] = [];
+  private map: Fruit[][] = [];
+  private mapBlueprint: Fruit[][] = [];
   private lootWeights: LootWeights;
 
   constructor(width: number, height: number, moveLimit: number, lootWeights: LootWeights) {
@@ -44,49 +44,101 @@ class Game {
     this.generateMap();
   }
 
-  public generateMap(fromBlueprint: boolean = this.mapBlueprint.length === this.height) {
+  public generateMap() {
     this.map = [];
-    if (!fromBlueprint) gameMapElement.innerHTML = '';
-    // ! fix from blueprint
     for (let y = 0; y < this.height; y++) {
-      const row: number[] = [];
+      const row: Fruit[] = [];
       for (let x = 0; x < this.width; x++) {
-        const fruits = fromBlueprint ? this.mapBlueprint[y][x] : weightedRandom(this.lootWeights);
-        row.push(fruits);
-        const cell = fromBlueprint ? (document.querySelector(`[data-x="${x}"][data-y="${y}"]`) as HTMLDivElement) : document.createElement('div');
-        cell.innerHTML = '';
-        if (!fromBlueprint) {
-          cell.setAttribute('data-x', x.toString());
-          cell.setAttribute('data-y', y.toString());
-          cell.addEventListener('click', () => handleCellClick(x, y));
-        }
-        if (fruits === 0) {
-          cell.style.backgroundImage = `url('imgs/assets/bg${Math.floor(Math.random() * 3) + 1}.png')`;
-        } else {
-          cell.style.backgroundImage = `url('imgs/assets/grid.png')`;
-          const fruit = document.createElement('div');
-          fruit.classList.add('h-full', 'w-full', 'flex', 'bg-cover', 'bg-no-repeat');
-          fruit.style.backgroundImage = `url('imgs/assets/apple${fruits}.png')`;
-          cell.appendChild(fruit);
-        }
-        if (!fromBlueprint) gameMapElement.appendChild(cell);
+        row.push({ flavor: fruitFlavors[Math.floor(Math.random() * fruitFlavors.length)], amount: weightedRandom(this.lootWeights) });
       }
       this.map.push(row);
     }
-    this.mapBlueprint = this.map;
+    this.mapBlueprint = [...this.map];
+    this.drawMap();
   }
 
-  public getItemAt(pos: Vec2): number {
+  public restoreMap() {
+    this.map = this.mapBlueprint;
+  }
+
+  public drawMap() {
+    gameMapElement.innerHTML = '';
+    for (let y = 0; y < this.height; y++) {
+      for (let x = 0; x < this.width; x++) {
+        const fruits = this.getItemAt({ x, y });
+        const cell = this.createCell({ x, y });
+        if (fruits.amount === 0) {
+          cell.style.backgroundImage = `url('imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png')`;
+          if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 6) + 1, 'foliage'));
+        } else {
+          cell.style.backgroundImage = `url('imgs/assets/paths/single.png')`;
+          cell.appendChild(this.createDecor(fruits.amount, 'fruit', fruits.flavor));
+
+          const neighbors: { [key: string]: boolean } = { t: false, l: false, r: false, b: false };
+          for (const { name, dx, dy } of [
+            { name: 't', dx: 0, dy: -1 },
+            { name: 'l', dx: -1, dy: 0 },
+            { name: 'r', dx: 1, dy: 0 },
+            { name: 'b', dx: 0, dy: 1 },
+          ]) {
+            const neighborX = x + dx;
+            const neighborY = y + dy;
+            if (neighborX >= 0 && neighborX < this.width && neighborY >= 0 && neighborY < this.height)
+              neighbors[name] = this.getItemAt({ x: neighborX, y: neighborY }).amount > 0;
+          }
+          const hasSides = neighbors.t || neighbors.l || neighbors.r || neighbors.b;
+          if (hasSides) {
+            let src = 'single';
+            if (neighbors.t && neighbors.l && neighbors.r && neighbors.b) src = `x`;
+            else if (neighbors.t && neighbors.l && neighbors.r) src = `t_b`;
+            else if (neighbors.t && neighbors.l && neighbors.b) src = `t_r`;
+            else if (neighbors.t && neighbors.b && neighbors.r) src = `t_l`;
+            else if (neighbors.b && neighbors.l && neighbors.r) src = `t_t`;
+            else if (neighbors.b && neighbors.t) src = `i_v`;
+            else if (neighbors.r && neighbors.l) src = `i_h`;
+            else if (neighbors.t && neighbors.l) src = `c_br`;
+            else if (neighbors.t && neighbors.r) src = `c_bl`;
+            else if (neighbors.b && neighbors.l) src = `c_tr`;
+            else if (neighbors.b && neighbors.r) src = `c_tl`;
+            else if (neighbors.t) src = `end_t`;
+            else if (neighbors.l) src = `end_l`;
+            else if (neighbors.r) src = `end_r`;
+            else if (neighbors.b) src = `end_b`;
+            cell.style.backgroundImage = `url('imgs/assets/paths/${src}.png')`;
+          }
+        }
+        gameMapElement.appendChild(cell);
+      }
+    }
+  }
+
+  private createCell(pos: Vec2): HTMLDivElement {
+    const cell = document.createElement('div');
+    cell.innerHTML = '';
+    cell.setAttribute('data-x', pos.x.toString());
+    cell.setAttribute('data-y', pos.y.toString());
+    cell.addEventListener('click', () => handleCellClick(pos.x, pos.y));
+    return cell;
+  }
+
+  private createDecor(id: string | number, type: string, category: string | undefined = undefined): HTMLDivElement {
+    const decor = document.createElement('div');
+    decor.classList.add('sprite', type);
+    decor.style.backgroundImage = `url('imgs/assets/${category ?? type}/${id.toString()}.png')`;
+    return decor;
+  }
+
+  public getItemAt(pos: Vec2): Fruit {
     return this.map[pos.y][pos.x];
   }
 
   public setItemAt(pos: Vec2, value: number): void {
-    this.map[pos.y][pos.x] = value;
+    this.map[pos.y][pos.x].amount = value;
   }
 
-  public collectItemAt(pos: Vec2): number {
+  public collectItemAt(pos: Vec2): Fruit {
     const item = this.map[pos.y][pos.x];
-    this.map[pos.y][pos.x] = 0;
+    this.map[pos.y][pos.x].amount = 0;
     return item;
   }
 
@@ -130,7 +182,7 @@ class Player {
         y: this.pos.y + dy,
       };
       if (newPos.x >= 0 && newPos.x < game.getMapWidth() && newPos.y >= 0 && newPos.y < game.getMapHeight()) {
-        this.addFruitsCollected(game.collectItemAt(newPos));
+        this.addFruitsCollected(game.collectItemAt(newPos).amount);
         this.pos = newPos;
         this.moveCount++;
       }
@@ -169,7 +221,9 @@ function updateUI() {
     const pos = { x: parseInt(cell.getAttribute('data-x')!), y: parseInt(cell.getAttribute('data-y')!) };
 
     if (player && player.comparePos(pos)) {
-      cell.innerHTML = '';
+      //cell.innerHTML = '';
+      const fruit = cell.querySelector('.fruit');
+      if (fruit !== null) fruit.remove();
       plr.id = 'player';
       plr.style.backgroundImage = `url('imgs/assets/player.png')`;
       cell.appendChild(plr);
