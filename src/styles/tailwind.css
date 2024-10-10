@@ -54,7 +54,7 @@ footer img {
 }
 
 #game > div {
-  @apply h-[64px] w-[64px] flex items-center justify-center bg-zinc-500 hover:brightness-75 hover:cursor-pointer text-xl bg-cover bg-no-repeat relative;
+  @apply h-[64px] w-[64px] min-w-[64px] min-h-[64px] flex items-center justify-center bg-zinc-500 hover:brightness-75 hover:cursor-pointer text-xl bg-cover bg-no-repeat relative;
   image-rendering: pixelated;
 }
 .sprite,
@@ -63,7 +63,7 @@ footer img {
 }
 
 #player {
-  @apply z-50;
+  @apply z-50 bottom-4;
 }
 
 .easteregg {

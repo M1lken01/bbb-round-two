@@ -206,7 +206,9 @@ class Player {
   }
 
   public move(dx: number, dy: number): Vec2 {
-    if (game.isOver() || this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0) {
+    console.log(!game.isOver(), this.moveCount < game.getMoveLimit(), game.getMoveLimit() <= 0);
+    const hasMovesLeft = this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0;
+    if (hasMovesLeft) {
       const newPos = {
         x: this.pos.x + dx,
         y: this.pos.y + dy,
@@ -258,7 +260,7 @@ function updateUI() {
       const fruit = cell.querySelector('.fruit');
       if (fruit !== null) fruit.remove();
       plr.id = 'player';
-      plr.style.backgroundImage = cssSrc(`imgs/assets/player.png`);
+      plr.style.backgroundImage = cssSrc(`imgs/assets/player.gif`);
       cell.appendChild(plr);
     }
   }
