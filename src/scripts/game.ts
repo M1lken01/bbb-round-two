@@ -1,12 +1,27 @@
 const gameMapElement = document.getElementById('game')!;
 const movesLeftElement = document.querySelector('#moves>span')!;
 const fruitsCollectedElement = document.querySelector('#score>span')!;
-//const restartButton = document.getElementById('restart-button')!;
+const startButton = document.querySelector('button#start')!;
+const retryButton = document.querySelector('button#retry')!;
+const menuContainer = document.querySelector('div#menu-container') as HTMLDivElement;
+const gameContainer = document.querySelector('div#game-container') as HTMLDivElement;
 
 const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
-type Fruit = { flavor: (typeof fruitFlavors)[number]; amount: number };
+type Fruit = { flavor?: (typeof fruitFlavors)[number]; amount: number };
 type Vec2 = { x: number; y: number };
 type LootWeights = { [key: number]: number };
+
+let imagePaths: string[] = [];
+function preloadImages(imagePaths: string[]) {
+  imagePaths.forEach((path) => {
+    new Image().src = path;
+  });
+}
+
+function cssSrc(src: string): string {
+  imagePaths.push(src);
+  return `url('${src}')`;
+}
 
 function weightedRandom(probabilities: LootWeights): number {
   const keys = Object.keys(probabilities).map(Number);
@@ -32,9 +47,10 @@ class Game {
   private width: number;
   private height: number;
   private moveLimit: number;
-  private map: Fruit[][] = [];
+  public map: Fruit[][] = [];
   private mapBlueprint: Fruit[][] = [];
   private lootWeights: LootWeights;
+  private hasEnded = false;
 
   constructor(width: number, height: number, moveLimit: number, lootWeights: LootWeights) {
     this.width = width;
@@ -49,7 +65,8 @@ class Game {
     for (let y = 0; y < this.height; y++) {
       const row: Fruit[] = [];
       for (let x = 0; x < this.width; x++) {
-        row.push({ flavor: fruitFlavors[Math.floor(Math.random() * fruitFlavors.length)], amount: weightedRandom(this.lootWeights) });
+        const amount = weightedRandom(this.lootWeights);
+        row.push({ flavor: amount === 0 ? undefined : fruitFlavors[Math.floor(Math.random() * fruitFlavors.length)], amount });
       }
       this.map.push(row);
     }
@@ -68,10 +85,10 @@ class Game {
         const fruits = this.getItemAt({ x, y });
         const cell = this.createCell({ x, y });
         if (fruits.amount === 0) {
-          cell.style.backgroundImage = `url('imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png')`;
+          cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
           if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 6) + 1, 'foliage'));
         } else {
-          cell.style.backgroundImage = `url('imgs/assets/paths/single.png')`;
+          cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
           cell.appendChild(this.createDecor(fruits.amount, 'fruit', fruits.flavor));
 
           const neighbors: { [key: string]: boolean } = { t: false, l: false, r: false, b: false };
@@ -104,7 +121,7 @@ class Game {
             else if (neighbors.l) src = `end_l`;
             else if (neighbors.r) src = `end_r`;
             else if (neighbors.b) src = `end_b`;
-            cell.style.backgroundImage = `url('imgs/assets/paths/${src}.png')`;
+            cell.style.backgroundImage = cssSrc(`imgs/assets/paths/${src}.png`);
           }
         }
         gameMapElement.appendChild(cell);
@@ -124,7 +141,7 @@ class Game {
   private createDecor(id: string | number, type: string, category: string | undefined = undefined): HTMLDivElement {
     const decor = document.createElement('div');
     decor.classList.add('sprite', type);
-    decor.style.backgroundImage = `url('imgs/assets/${category ?? type}/${id.toString()}.png')`;
+    decor.style.backgroundImage = cssSrc(`imgs/assets/${category ?? type}/${id.toString()}.png`);
     return decor;
   }
 
@@ -133,13 +150,14 @@ class Game {
   }
 
   public setItemAt(pos: Vec2, value: number): void {
-    this.map[pos.y][pos.x].amount = value;
+    this.getItemAt(pos).amount = value;
   }
 
   public collectItemAt(pos: Vec2): Fruit {
-    const item = this.map[pos.y][pos.x];
-    this.map[pos.y][pos.x].amount = 0;
-    return item;
+    const item = this.getItemAt(pos);
+    const collectedItem = { ...item };
+    item.amount = 0;
+    return collectedItem;
   }
 
   public getMapWidth(): number {
@@ -152,6 +170,18 @@ class Game {
 
   public getMoveLimit(): number {
     return this.moveLimit;
+  }
+
+  public endGame(): void {
+    this.hasEnded = true;
+  }
+
+  public startGame(): void {
+    this.hasEnded = false;
+  }
+
+  public isOver(): boolean {
+    return this.hasEnded;
   }
 }
 
@@ -176,7 +206,7 @@ class Player {
   }
 
   public move(dx: number, dy: number): Vec2 {
-    if (this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0) {
+    if (game.isOver() || this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0) {
       const newPos = {
         x: this.pos.x + dx,
         y: this.pos.y + dy,
@@ -186,6 +216,9 @@ class Player {
         this.pos = newPos;
         this.moveCount++;
       }
+    } else {
+      game.endGame();
+      alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player.getFruitsCollected()}`);
     }
     return this.pos;
   }
@@ -225,7 +258,7 @@ function updateUI() {
       const fruit = cell.querySelector('.fruit');
       if (fruit !== null) fruit.remove();
       plr.id = 'player';
-      plr.style.backgroundImage = `url('imgs/assets/player.png')`;
+      plr.style.backgroundImage = cssSrc(`imgs/assets/player.png`);
       cell.appendChild(plr);
     }
   }
@@ -253,8 +286,10 @@ window.addEventListener('keydown', (e) => {
   updateUI();
 });
 
-/*restartButton.addEventListener('click', () => {
-  initializeGame();
-});*/
+startButton.addEventListener('click', () => {
+  gameContainer.classList.remove('!hidden');
+  menuContainer.classList.add('!hidden');
+  updateUI();
+});
 
-updateUI();
+preloadImages(imagePaths);

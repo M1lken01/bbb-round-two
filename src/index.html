@@ -14,15 +14,16 @@
       <a class="p-8 hover:text-zinc-400" href="index.html">Játék</a>
     </header>
     <div class="flex flex-col justify-center flex-1 m-8">
-      <div class="flex flex-col items-center justify-center gap-4">
+      <div class="flex flex-col items-center justify-center gap-16 text-center" id="menu-container">
         <div>
           <h1 class="text-6xl font-bold">Játék</h1>
+          <p class="text-2xl font-bold">A jatek celja descriptip stbstb</p>
         </div>
-        <div class="flex gap-4">
-          <button class="text-3xl button">Start</button>
+        <div>
+          <button class="text-3xl button" id="start">Start</button>
         </div>
       </div>
-      <div class="flex flex-col items-center justify-center">
+      <div class="flex flex-col items-center justify-center !hidden" id="game-container">
         <div id="game" class="grid grid-cols-12 grid-rows-12 w-fit">grid</div>
         <h2 class="text-3xl" id="score">Score: <span>0</span></h2>
         <h2 class="text-3xl" id="moves">Moves: <span>0</span></h2>
