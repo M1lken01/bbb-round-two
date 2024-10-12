@@ -80,53 +80,76 @@ class Game {
 
   public drawMap() {
     gameMapElement.innerHTML = '';
-    for (let y = 0; y < this.height; y++) {
-      for (let x = 0; x < this.width; x++) {
-        const fruits = this.getItemAt({ x, y });
-        const cell = this.createCell({ x, y });
-        if (fruits.amount === 0) {
+    gameMapElement.style.gridTemplateColumns = `repeat(${this.width + 2}, minmax(0, 1fr))`;
+    gameMapElement.style.gridTemplateRows = `repeat(${this.height + 2}, minmax(0, 1fr))`;
+    for (let y = -1; y <= this.height; y++) {
+      for (let x = -1; x <= this.width; x++) {
+        if (x === -1 || x === this.width || y === -1 || y === this.height) {
+          const cell = document.createElement('div');
           cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
-          if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
+          cell.appendChild(this.createDecor(this.getBorderType(x, y), 'fences'));
+          gameMapElement.appendChild(cell);
         } else {
-          cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
-          cell.appendChild(this.createDecor(fruits.amount, 'fruit', fruits.flavor));
+          const fruits = this.getItemAt({ x, y });
+          const cell = this.createCell({ x, y });
+          if (fruits.amount === 0) {
+            cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
+            if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
+          } else {
+            cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
+            cell.appendChild(this.createDecor(fruits.amount, 'fruit', fruits.flavor));
 
-          const neighbors: { [key: string]: boolean } = { t: false, l: false, r: false, b: false };
-          for (const { name, dx, dy } of [
-            { name: 't', dx: 0, dy: -1 },
-            { name: 'l', dx: -1, dy: 0 },
-            { name: 'r', dx: 1, dy: 0 },
-            { name: 'b', dx: 0, dy: 1 },
-          ]) {
-            const neighborX = x + dx;
-            const neighborY = y + dy;
-            if (neighborX >= 0 && neighborX < this.width && neighborY >= 0 && neighborY < this.height)
-              neighbors[name] = this.getItemAt({ x: neighborX, y: neighborY }).amount > 0;
+            const neighbors: { [key: string]: boolean } = { t: false, l: false, r: false, b: false };
+            for (const { name, dx, dy } of [
+              { name: 't', dx: 0, dy: -1 },
+              { name: 'l', dx: -1, dy: 0 },
+              { name: 'r', dx: 1, dy: 0 },
+              { name: 'b', dx: 0, dy: 1 },
+            ]) {
+              const neighborX = x + dx;
+              const neighborY = y + dy;
+              if (neighborX >= 0 && neighborX < this.width && neighborY >= 0 && neighborY < this.height)
+                neighbors[name] = this.getItemAt({ x: neighborX, y: neighborY }).amount > 0;
+            }
+            const hasSides = neighbors.t || neighbors.l || neighbors.r || neighbors.b;
+            if (hasSides) {
+              let src = 'single';
+              if (neighbors.t && neighbors.l && neighbors.r && neighbors.b) src = `x`;
+              else if (neighbors.t && neighbors.l && neighbors.r) src = `t_b`;
+              else if (neighbors.t && neighbors.l && neighbors.b) src = `t_r`;
+              else if (neighbors.t && neighbors.b && neighbors.r) src = `t_l`;
+              else if (neighbors.b && neighbors.l && neighbors.r) src = `t_t`;
+              else if (neighbors.b && neighbors.t) src = `i_v`;
+              else if (neighbors.r && neighbors.l) src = `i_h`;
+              else if (neighbors.t && neighbors.l) src = `c_br`;
+              else if (neighbors.t && neighbors.r) src = `c_bl`;
+              else if (neighbors.b && neighbors.l) src = `c_tr`;
+              else if (neighbors.b && neighbors.r) src = `c_tl`;
+              else if (neighbors.t) src = `end_t`;
+              else if (neighbors.l) src = `end_l`;
+              else if (neighbors.r) src = `end_r`;
+              else if (neighbors.b) src = `end_b`;
+              cell.style.backgroundImage = cssSrc(`imgs/assets/paths/${src}.png`);
+            }
           }
-          const hasSides = neighbors.t || neighbors.l || neighbors.r || neighbors.b;
-          if (hasSides) {
-            let src = 'single';
-            if (neighbors.t && neighbors.l && neighbors.r && neighbors.b) src = `x`;
-            else if (neighbors.t && neighbors.l && neighbors.r) src = `t_b`;
-            else if (neighbors.t && neighbors.l && neighbors.b) src = `t_r`;
-            else if (neighbors.t && neighbors.b && neighbors.r) src = `t_l`;
-            else if (neighbors.b && neighbors.l && neighbors.r) src = `t_t`;
-            else if (neighbors.b && neighbors.t) src = `i_v`;
-            else if (neighbors.r && neighbors.l) src = `i_h`;
-            else if (neighbors.t && neighbors.l) src = `c_br`;
-            else if (neighbors.t && neighbors.r) src = `c_bl`;
-            else if (neighbors.b && neighbors.l) src = `c_tr`;
-            else if (neighbors.b && neighbors.r) src = `c_tl`;
-            else if (neighbors.t) src = `end_t`;
-            else if (neighbors.l) src = `end_l`;
-            else if (neighbors.r) src = `end_r`;
-            else if (neighbors.b) src = `end_b`;
-            cell.style.backgroundImage = cssSrc(`imgs/assets/paths/${src}.png`);
-          }
+          gameMapElement.appendChild(cell);
         }
-        gameMapElement.appendChild(cell);
       }
     }
+  }
+
+  private getBorderType(x: number, y: number): string {
+    const t = y == -1;
+    const b = y == this.height;
+    const l = x == -1;
+    const r = x == this.width;
+    if (t && l) return 'corner_tl';
+    if (t && r) return 'corner_tr';
+    if (b && l) return 'corner_bl';
+    if (b && r) return 'corner_br';
+    if (l || r) return 'vertical';
+    if (t || b) return 'horizontal';
+    return 'single';
   }
 
   private createCell(pos: Vec2): HTMLDivElement {
@@ -174,6 +197,7 @@ class Game {
 
   public endGame(): void {
     this.hasEnded = true;
+    alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player.getFruitsCollected()}`);
   }
 
   public startGame(): void {
@@ -205,22 +229,18 @@ class Player {
     return this.pos;
   }
 
+  public hasMovesLeft(): boolean {
+    return this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0;
+  }
+
   public move(dx: number, dy: number): Vec2 {
-    console.log(!game.isOver(), this.moveCount < game.getMoveLimit(), game.getMoveLimit() <= 0);
-    const hasMovesLeft = this.moveCount < game.getMoveLimit() || game.getMoveLimit() <= 0;
-    if (hasMovesLeft) {
-      const newPos = {
-        x: this.pos.x + dx,
-        y: this.pos.y + dy,
-      };
-      if (newPos.x >= 0 && newPos.x < game.getMapWidth() && newPos.y >= 0 && newPos.y < game.getMapHeight()) {
-        this.addFruitsCollected(game.collectItemAt(newPos).amount);
-        this.pos = newPos;
-        this.moveCount++;
-      }
-    } else {
-      game.endGame();
-      alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player.getFruitsCollected()}`);
+    if (game.isOver()) return this.pos;
+    const newPos = { x: this.pos.x + dx, y: this.pos.y + dy };
+    if (newPos.x >= 0 && newPos.x < game.getMapWidth() && newPos.y >= 0 && newPos.y < game.getMapHeight()) {
+      this.addFruitsCollected(game.collectItemAt(newPos).amount);
+      this.pos = newPos;
+      this.moveCount++;
+      if (!this.hasMovesLeft()) game.endGame();
     }
     return this.pos;
   }
@@ -256,7 +276,6 @@ function updateUI() {
     const pos = { x: parseInt(cell.getAttribute('data-x')!), y: parseInt(cell.getAttribute('data-y')!) };
 
     if (player && player.comparePos(pos)) {
-      //cell.innerHTML = '';
       const fruit = cell.querySelector('.fruit');
       if (fruit !== null) fruit.remove();
       plr.id = 'player';
