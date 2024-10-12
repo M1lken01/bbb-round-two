@@ -3,6 +3,7 @@ const movesLeftElement = document.querySelector('#moves>span')!;
 const fruitsCollectedElement = document.querySelector('#score>span')!;
 const startButton = document.querySelector('button#start')!;
 const retryButton = document.querySelector('button#retry')!;
+const restartButton = document.querySelector('button#restart')!;
 const menuContainer = document.querySelector('div#menu-container') as HTMLDivElement;
 const gameContainer = document.querySelector('div#game-container') as HTMLDivElement;
 
@@ -30,36 +31,34 @@ const moveIncrease: PowerUp = {
     game.incMoveLimit(5);
   },
 };
+
+const growPlants: PowerUp = {
+  name: 'Grow Plants',
+  description: 'Grows a fruit.',
+  passive: false,
+  activate: (game, player) => {},
+};
+
+const multiCollect: PowerUp = {
+  name: 'Multi Collect',
+  description: 'Collect fruits from all adjacent tiles.',
+  passive: false,
+  activate: (game, player) => {},
+};
+
 /*
-class Bonemeal implements PowerUp {
-  name = 'Bonemeal';
-  description = 'Grow fruit on random empty tiles.';
-  usesRemaining = 1;
-  passive = false;
-
-  activate(player: Player, game: Game): void {
-    game.growRandomFruits(3);
-    this.usesRemaining--;
-  }
+activate(player: Player, game: Game): void {
+  game.growRandomFruits(3);
 }
-
-class MultiCollect implements PowerUp {
-  name = 'Multi Collect';
-  description = 'Collect fruits from all adjacent tiles in one turn.';
-  usesRemaining = 1;
-  passive = false;
-
-  activate(player: Player, game: Game): void {
-    const adjacentTiles = game.getAdjacentTiles(player.getPos());
-    adjacentTiles.forEach((tile) => {
-      player.collectItemAt(tile);
-    });
-    this.usesRemaining--;
-  }
+activate(player: Player, game: Game): void {
+  const adjacentTiles = game.getAdjacentTiles(player.getPos());
+  adjacentTiles.forEach((tile) => {
+    player.collectItemAt(tile);
+  });
 }
 */
 
-const powerUpTypes = [teleport, moveIncrease];
+const powerUpTypes = [teleport, moveIncrease, growPlants, multiCollect];
 const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
 type Fruit = { flavor?: (typeof fruitFlavors)[number]; amount: number };
 type Vec2 = { x: number; y: number };
@@ -105,8 +104,15 @@ function handleCellClick(x: number, y: number) {
 
 function getRandomElement<T>(array: T[]): T | undefined {
   if (array.length === 0) return undefined;
-  const randomIndex = Math.floor(Math.random() * array.length);
-  return array[randomIndex];
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function deepClone(obj: any): any {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map((item) => deepClone(item));
+  const clone: any = {};
+  for (const key in obj) if (obj.hasOwnProperty(key)) clone[key] = deepClone(obj[key]);
+  return clone;
 }
 
 class Game {
@@ -139,12 +145,15 @@ class Game {
       }
       this.map.push(row);
     }
-    this.mapBlueprint = [...this.map];
+    this.mapBlueprint = deepClone(this.map);
     this.drawMap();
   }
 
   public restoreMap() {
-    this.map = this.mapBlueprint;
+    this.map = deepClone(this.mapBlueprint);
+    console.log(this.map);
+    this.drawMap();
+    updateUI();
   }
 
   public drawMap() {
@@ -161,7 +170,7 @@ class Game {
         } else {
           const item = this.getItemAt({ x, y });
           const cell = this.createCell({ x, y });
-          if (item === undefined) {
+          if (!item) {
             cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
             if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
           } else if (isPowerUp(item)) {
@@ -183,8 +192,7 @@ class Game {
               if (neighborX >= 0 && neighborX < this.width && neighborY >= 0 && neighborY < this.height)
                 neighbors[name] = isFruit(this.getItemAt({ x: neighborX, y: neighborY }));
             }
-            const hasSides = neighbors.t || neighbors.l || neighbors.r || neighbors.b;
-            if (hasSides) {
+            if (neighbors.t || neighbors.l || neighbors.r || neighbors.b) {
               let src = 'single';
               if (neighbors.t && neighbors.l && neighbors.r && neighbors.b) src = `x`;
               else if (neighbors.t && neighbors.l && neighbors.r) src = `t_b`;
@@ -278,7 +286,7 @@ class Game {
 
   public endGame(): void {
     this.hasEnded = true;
-    alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player.getFruitsCollected()}`);
+    alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player!.getFruitsCollected()}`);
   }
 
   public startGame(): void {
@@ -298,7 +306,7 @@ class Player {
   private pos: Vec2;
   private moveCount = 0;
   private fruitsCollected = 0;
-  public powerUps: PowerUp[] = [];
+  private powerUps: PowerUp[] = [];
 
   constructor(pos: Vec2) {
     this.pos = pos;
@@ -355,7 +363,7 @@ class Player {
 
   public addPowerUp(powerUp: PowerUp) {
     console.log(powerUp);
-    if (powerUp.passive) powerUp.activate(game, player);
+    if (powerUp.passive) powerUp.activate(game, this);
     else this.powerUps.push(powerUp);
   }
 }
@@ -381,6 +389,7 @@ function updateUI() {
 }
 
 window.addEventListener('keydown', (e) => {
+  if (!player) return;
   switch (e.key) {
     case 'ArrowUp':
     case 'w':
@@ -408,7 +417,12 @@ startButton.addEventListener('click', () => {
   updateUI();
 });
 
+retryButton.addEventListener('click', () => {
+  player = undefined;
+  game.restoreMap();
+});
+
 preloadImages(imagePaths);
 
-const game = new Game(15, 12, 24, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
-let player: Player;
+const game = new Game(15, 12, 25, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
+let player: Player | undefined;

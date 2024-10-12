@@ -13,7 +13,7 @@
     <header class="flex text-white bg-zinc-900">
       <a class="p-8 hover:text-zinc-400" href="index.html">Játék</a>
     </header>
-    <div class="flex flex-col justify-center flex-1 m-8">
+    <div class="flex flex-col items-center justify-center flex-1 m-8">
       <div class="flex flex-col items-center justify-center gap-16 text-center" id="menu-container">
         <div>
           <h1 class="text-6xl font-bold">Játék</h1>
@@ -23,10 +23,22 @@
           <button class="text-3xl button" id="start">Start</button>
         </div>
       </div>
-      <div class="flex flex-col items-center justify-center !hidden" id="game-container">
-        <div id="game" class="grid w-max">grid</div>
-        <h2 class="text-3xl" id="score">Score: <span>0</span></h2>
-        <h2 class="text-3xl" id="moves">Moves: <span>0</span></h2>
+      <div class="flex flex-col items-center justify-center !hidden gap-8 w-fit" id="game-container">
+        <div id="game" class="grid border-8 border-solid w-max border-zinc-950"></div>
+        <div class="grid w-full grid-cols-2 grid-rows-2 gap-4">
+          <div>
+            <h2 class="text-3xl" id="score">Score: <span>0</span></h2>
+          </div>
+          <div class="flex justify-end">
+            <button id="retry" class="text-3xl button">retry</button>
+          </div>
+          <div>
+            <h2 class="text-3xl" id="moves">Moves Left: <span>0</span></h2>
+          </div>
+          <div class="flex justify-end">
+            <button id="reset" class="text-3xl button">new game</button>
+          </div>
+        </div>
       </div>
     </div>
     <footer class="flex flex-col items-center justify-center p-16 text-white bg-zinc-900">
