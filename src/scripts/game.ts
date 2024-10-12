@@ -86,7 +86,7 @@ class Game {
         const cell = this.createCell({ x, y });
         if (fruits.amount === 0) {
           cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
-          if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 6) + 1, 'foliage'));
+          if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
         } else {
           cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
           cell.appendChild(this.createDecor(fruits.amount, 'fruit', fruits.flavor));
