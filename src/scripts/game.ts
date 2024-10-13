@@ -1,17 +1,16 @@
-const gameMapElement = document.getElementById('game')!;
-const movesLeftElement = document.querySelector('#moves>span')!;
-const fruitsCollectedElement = document.querySelector('#score>span')!;
-const startButton = document.querySelector('button#start')!;
-const retryButton = document.querySelector('button#retry')!;
-const restartButton = document.querySelector('button#restart')!;
+const getHighScore = () => parseInt(localStorage.getItem('high-score') ?? '0');
+const setHighScore = (value: number) => localStorage.setItem('high-score', Math.floor(value).toString());
+const gameMap = document.querySelector('div#game') as HTMLDivElement;
 const menuContainer = document.querySelector('div#menu-container') as HTMLDivElement;
 const gameContainer = document.querySelector('div#game-container') as HTMLDivElement;
 const powerUpsContainer = document.querySelector('div#powerups') as HTMLDivElement;
+const scoreSpan = document.querySelector('#score>span')!;
+const movesLeftSpan = document.querySelector('#moves>span')!;
 
 interface PowerUp {
   name: string;
   description: string;
-  activate(game: Game, player: Player): void;
+  activate(game: Game, player: Player): boolean;
   selectable: boolean;
   hotkey?: string;
 }
@@ -20,9 +19,10 @@ const teleport: PowerUp = {
   name: 'Teleport',
   description: 'Instantly move to any position on the map.',
   hotkey: 't',
-  activate: (game, player) => {
+  activate: (game, player): boolean => {
     player.setPos(game.getSelected() ?? game.getRandomPos());
     game.removeSelected();
+    return true;
   },
   selectable: true,
 };
@@ -30,8 +30,9 @@ const teleport: PowerUp = {
 const moveIncrease: PowerUp = {
   name: 'Move Increase',
   description: 'Increase available moves by 5.',
-  activate: (game, player) => {
+  activate: (game, player): boolean => {
     game.incMoveLimit(5);
+    return true;
   },
   selectable: false,
 };
@@ -40,9 +41,12 @@ const growPlants: PowerUp = {
   name: 'Grow Plants',
   description: 'Grows a fruit.',
   hotkey: 'r',
-  activate: (game, player) => {
+  activate: (game, player): boolean => {
+    const pos = game.getSelected() ?? game.getRandomPos();
+    if (!isFruit(game.getItemAt(pos))) return false;
     game.growFruit(game.getSelected() ?? game.getRandomPos(), Math.floor(Math.random() * 3) + 2);
     game.removeSelected();
+    return true;
   },
   selectable: true,
 };
@@ -51,11 +55,11 @@ const multiCollect: PowerUp = {
   name: 'Multi Collect',
   description: 'Collect fruits from all adjacent tiles.',
   hotkey: 'e',
-  activate: (game, player) => {
+  activate: (game, player): boolean => {
     game.getNeighborPositions(player.getPos()).forEach((pos) => {
-      const item = game.getItemAt(pos);
-      if (item !== undefined) player.collectItemAt(pos);
+      if (game.getItemAt(pos) !== undefined) player.collectItemAt(pos);
     });
+    return true;
   },
   selectable: false,
 };
@@ -73,14 +77,13 @@ const isFruit = (item: Item): item is Fruit => item !== undefined && 'flavor' in
 const isPowerUp = (item: Item): item is PowerUp => item !== undefined && 'name' in item;
 
 let imagePaths: string[] = [];
-function preloadImages(imagePaths: string[]) {
-  imagePaths.forEach((path) => {
-    new Image().src = path;
-  });
+function preloadImages(imagePaths: string[]): void {
+  imagePaths.forEach((path) => (new Image().src = path));
+  console.info(`Preloading completed and loaded ${imagePaths.length} images!`);
 }
 
 function cssSrc(src: string): string {
-  imagePaths.push(src);
+  if (!imagePaths.includes(src)) imagePaths.push(src);
   return `url('${src}')`;
 }
 
@@ -89,7 +92,7 @@ const powerUpSprite = (name: string): string => name.replaceAll(' ', '').toLower
 
 function createPowerUpButton(idx: number, hotkey: string, src: string, alt: string): HTMLButtonElement {
   const button = document.createElement('button');
-  button.classList.add('rounded-full', 'hover:bg-zinc-900');
+  button.classList.add('rounded-full', 'hover:bg-zinc-900', 'h-20');
   if (player!.getSelectedPowerUpIdx() === idx) button.classList.add('selected');
   button.title = `Hotkey: ${hotkey}`;
   button.addEventListener('click', () => {
@@ -178,16 +181,16 @@ class Game {
   }
 
   public drawMap() {
-    gameMapElement.innerHTML = '';
-    gameMapElement.style.gridTemplateColumns = `repeat(${this.width + 2}, minmax(0, 1fr))`;
-    gameMapElement.style.gridTemplateRows = `repeat(${this.height + 2}, minmax(0, 1fr))`;
+    gameMap.innerHTML = '';
+    gameMap.style.gridTemplateColumns = `repeat(${this.width + 2}, minmax(0, 1fr))`;
+    gameMap.style.gridTemplateRows = `repeat(${this.height + 2}, minmax(0, 1fr))`;
     for (let y = -1; y <= this.height; y++) {
       for (let x = -1; x <= this.width; x++) {
         if (x === -1 || x === this.width || y === -1 || y === this.height) {
           const cell = document.createElement('div');
           cell.style.backgroundImage = grassSprite();
           cell.appendChild(this.createDecor(this.getBorderType(x, y), 'fences'));
-          gameMapElement.appendChild(cell);
+          gameMap.appendChild(cell);
         } else {
           const item = this.getItemAt({ x, y });
           const cell = this.createCell({ x, y });
@@ -213,26 +216,29 @@ class Game {
                 neighbors[name] = isFruit(this.getItemAt({ x: neighborX, y: neighborY }));
             }
             if (neighbors.t || neighbors.l || neighbors.r || neighbors.b) {
-              let src = 'single';
-              if (neighbors.t && neighbors.l && neighbors.r && neighbors.b) src = `x`;
-              else if (neighbors.t && neighbors.l && neighbors.r) src = `t_b`;
-              else if (neighbors.t && neighbors.l && neighbors.b) src = `t_r`;
-              else if (neighbors.t && neighbors.b && neighbors.r) src = `t_l`;
-              else if (neighbors.b && neighbors.l && neighbors.r) src = `t_t`;
-              else if (neighbors.b && neighbors.t) src = `i_v`;
-              else if (neighbors.r && neighbors.l) src = `i_h`;
-              else if (neighbors.t && neighbors.l) src = `c_br`;
-              else if (neighbors.t && neighbors.r) src = `c_bl`;
-              else if (neighbors.b && neighbors.l) src = `c_tr`;
-              else if (neighbors.b && neighbors.r) src = `c_tl`;
-              else if (neighbors.t) src = `end_t`;
-              else if (neighbors.l) src = `end_l`;
-              else if (neighbors.r) src = `end_r`;
-              else if (neighbors.b) src = `end_b`;
-              cell.style.backgroundImage = cssSrc(`imgs/assets/paths/${src}.png`);
+              const neighborConditions = [
+                { src: 'x', condition: () => neighbors.t && neighbors.l && neighbors.r && neighbors.b },
+                { src: 't_b', condition: () => neighbors.t && neighbors.l && neighbors.r },
+                { src: 't_r', condition: () => neighbors.t && neighbors.l && neighbors.b },
+                { src: 't_l', condition: () => neighbors.t && neighbors.r && neighbors.b },
+                { src: 't_t', condition: () => neighbors.b && neighbors.l && neighbors.r },
+                { src: 'i_v', condition: () => neighbors.t && neighbors.b },
+                { src: 'i_h', condition: () => neighbors.r && neighbors.l },
+                { src: 'c_br', condition: () => neighbors.t && neighbors.l },
+                { src: 'c_bl', condition: () => neighbors.t && neighbors.r },
+                { src: 'c_tr', condition: () => neighbors.b && neighbors.l },
+                { src: 'c_tl', condition: () => neighbors.b && neighbors.r },
+                { src: 'end_t', condition: () => neighbors.t },
+                { src: 'end_l', condition: () => neighbors.l },
+                { src: 'end_r', condition: () => neighbors.r },
+                { src: 'end_b', condition: () => neighbors.b },
+                { src: 'single', condition: () => true },
+              ];
+              const neighborData = neighborConditions.find((n) => n.condition())!;
+              cell.style.backgroundImage = cssSrc(`imgs/assets/paths/${neighborData.src}.png`);
             }
           }
-          gameMapElement.appendChild(cell);
+          gameMap.appendChild(cell);
         }
       }
     }
@@ -331,7 +337,13 @@ class Game {
 
   public endGame(): void {
     this.hasEnded = true;
-    alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${player!.getFruitsCollected()}`);
+    const score = player!.getFruitsCollected();
+    let highScoreText = '';
+    if (score > getHighScore()) {
+      setHighScore(score);
+      highScoreText = ' new high score!';
+    }
+    setTimeout(() => alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${score}${highScoreText}`), 100);
   }
 
   public startGame(): void {
@@ -444,12 +456,13 @@ class Player {
   }
 
   public activatePowerUp(index: number, trigger: boolean = false): boolean {
+    if (game.isOver()) return false;
     const powerUp = this.powerUps[index];
     if (powerUp.selectable && !trigger) {
       this.selectPowerUp(index);
       return false;
     }
-    powerUp.activate(game, this);
+    if (!powerUp.activate(game, this)) return false;
     this.powerUps.splice(index, 1);
     updateUI();
     return true;
@@ -474,15 +487,17 @@ class Player {
 }
 
 function updateUI(): void {
-  movesLeftElement.textContent = (player ? game.getMoveLimit() - player.getMoveCount() : game.getMoveLimit()).toString();
-  fruitsCollectedElement.textContent = (player ? player.getFruitsCollected() : 0).toString();
+  const score = player?.getFruitsCollected() ?? 0;
+  movesLeftSpan.textContent = (game.getMoveLimit() - (player?.getMoveCount() ?? 0)).toString();
+  scoreSpan.textContent = score.toString();
+  if (score === 69) scoreSpan.classList.add('easteregg');
+  else scoreSpan.classList.remove('easteregg');
   const plr = document.getElementById('player') || document.createElement('div');
   plr.remove();
-  const cells = gameMapElement.children;
+  const cells = gameMap.children;
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i] as HTMLElement;
     const pos = { x: parseInt(cell.getAttribute('data-x')!), y: parseInt(cell.getAttribute('data-y')!) };
-
     if (player && player.comparePos(pos)) {
       const item = cell.querySelector('.item');
       if (item !== null) item.remove();
@@ -530,18 +545,22 @@ window.addEventListener('keydown', (e) => {
   updateUI();
 });
 
-startButton.addEventListener('click', () => {
+document.querySelector('button#start')!.addEventListener('click', () => {
   gameContainer.classList.remove('!hidden');
   menuContainer.classList.add('!hidden');
   updateUI();
 });
 
-retryButton.addEventListener('click', () => {
+document.querySelector('button#retry')!.addEventListener('click', () => {
   player = undefined;
   game.restoreMap();
 });
 
-preloadImages(imagePaths);
+document.querySelector('button#reset')!.addEventListener('click', () => {
+  console.log('wip');
+});
 
-const game = new Game(15, 12, 25, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
+const game = new Game(15, 12, 30, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
 let player: Player | undefined;
+
+preloadImages(imagePaths);
