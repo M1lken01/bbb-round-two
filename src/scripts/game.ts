@@ -36,27 +36,25 @@ const growPlants: PowerUp = {
   name: 'Grow Plants',
   description: 'Grows a fruit.',
   hotkey: 'r',
-  activate: (game, player) => {},
+  activate: (game, player) => {
+    game.growFruit(
+      { x: Math.floor(Math.random() * game.getMapWidth()), y: Math.floor(Math.random() * game.getMapHeight()) },
+      Math.floor(Math.random() * 3) + 2,
+    );
+  },
 };
 
 const multiCollect: PowerUp = {
   name: 'Multi Collect',
   description: 'Collect fruits from all adjacent tiles.',
   hotkey: 'e',
-  activate: (game, player) => {},
+  activate: (game, player) => {
+    game.getNeighborPositions(player.getPos()).forEach((pos) => {
+      const item = game.getItemAt(pos);
+      if (item !== undefined) player.collectItemAt(pos);
+    });
+  },
 };
-
-/*
-activate(player: Player, game: Game): void {
-  game.growRandomFruits(3);
-}
-activate(player: Player, game: Game): void {
-  const adjacentTiles = game.getAdjacentTiles(player.getPos());
-  adjacentTiles.forEach((tile) => {
-    player.collectItemAt(tile);
-  });
-}
-*/
 
 const powerUpTypes = [teleport, moveIncrease, growPlants, multiCollect];
 const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
@@ -265,6 +263,29 @@ class Game {
     return decor;
   }
 
+  public getNeighborPositions(pos: Vec2): Vec2[] {
+    const neighbors: Vec2[] = [];
+    for (let dy = -1; dy <= 1; dy++) {
+      for (let dx = -1; dx <= 1; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const newX = pos.x + dx;
+        const newY = pos.y + dy;
+        if (newX >= 0 && newX < this.width && newY >= 0 && newY < this.height) neighbors.push({ x: newX, y: newY });
+      }
+    }
+    return neighbors;
+  }
+
+  public getCellElem(pos: Vec2): HTMLDivElement | null {
+    return document.querySelector(`[data-x="${pos.x}"][data-y="${pos.y}"]`);
+  }
+
+  public getEmptyCellElem(pos: Vec2): HTMLDivElement | null {
+    const cell = this.getCellElem(pos)!;
+    cell.innerHTML = '';
+    return cell;
+  }
+
   public getItemAt(pos: Vec2): Item {
     return this.map[pos.y][pos.x];
   }
@@ -273,10 +294,11 @@ class Game {
     this.map[pos.y][pos.x] = item;
   }
 
-  public growFruit(pos: Vec2, amount: number): boolean {
+  public growFruit(pos: Vec2, amount: number = 1): boolean {
     const item = this.getItemAt(pos);
     if (!item || !isFruit(item) || !item.flavor) return false;
-    item.amount = Math.min(item.amount + amount, 6);
+    item.amount = Math.floor(Math.min(item.amount + amount, 6));
+    this.getEmptyCellElem(pos)!.appendChild(this.createDecor(item.amount, 'item', item.flavor));
     return true;
   }
 
@@ -286,6 +308,7 @@ class Game {
     const collectedItem = { ...item };
     if (isFruit(item)) item.amount = 0;
     else if (isPowerUp(item)) this.setItemAt(pos, undefined);
+    this.getEmptyCellElem(pos);
     return collectedItem as Item;
   }
 
@@ -327,7 +350,7 @@ class Player {
 
   constructor(pos: Vec2) {
     this.pos = pos;
-    this.collectItem(pos);
+    this.collectItemAt(pos);
   }
 
   public getPos(): Vec2 {
@@ -347,7 +370,7 @@ class Player {
     if (game.isOver()) return this.pos;
     const newPos = { x: this.pos.x + dx, y: this.pos.y + dy };
     if (newPos.x >= 0 && newPos.x < game.getMapWidth() && newPos.y >= 0 && newPos.y < game.getMapHeight()) {
-      this.collectItem(newPos);
+      this.collectItemAt(newPos);
       this.pos = newPos;
       this.moveCount++;
       if (!this.hasMovesLeft()) game.endGame();
@@ -355,7 +378,7 @@ class Player {
     return this.pos;
   }
 
-  private collectItem(pos: Vec2): void {
+  public collectItemAt(pos: Vec2): void {
     const item = game.collectItemAt(pos);
     if (isFruit(item)) this.addFruitsCollected(item.amount);
     else if (isPowerUp(item)) this.addPowerUp(item);
