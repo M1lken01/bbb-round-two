@@ -25,18 +25,22 @@
       </div>
       <div class="flex flex-col items-center justify-center !hidden gap-8 w-fit" id="game-container">
         <div id="game" class="grid border-8 border-solid w-max border-zinc-950"></div>
-        <div class="grid w-full grid-cols-2 grid-rows-2 gap-4">
-          <div>
+        <div class="grid w-full grid-cols-6 grid-rows-2">
+          <div class="col-span-5">
             <h2 class="text-3xl" id="score">Score: <span>0</span></h2>
-          </div>
-          <div class="flex justify-end">
-            <button id="retry" class="text-3xl button">retry</button>
-          </div>
-          <div>
             <h2 class="text-3xl" id="moves">Moves Left: <span>0</span></h2>
           </div>
           <div class="flex justify-end">
-            <button id="reset" class="text-3xl button">new game</button>
+            <button id="retry" class="w-full my-2 text-3xl button">retry</button>
+          </div>
+          <div class="flex items-center h-20">
+            <h2 class="text-3xl">Power ups:</h2>
+          </div>
+          <div class="flex col-span-4">
+            <div class="flex" id="powerups"></div>
+          </div>
+          <div class="flex justify-end">
+            <button id="reset" class="w-full my-2 text-3xl button">new game</button>
           </div>
         </div>
       </div>

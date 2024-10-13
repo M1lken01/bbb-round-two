@@ -6,18 +6,19 @@ const retryButton = document.querySelector('button#retry')!;
 const restartButton = document.querySelector('button#restart')!;
 const menuContainer = document.querySelector('div#menu-container') as HTMLDivElement;
 const gameContainer = document.querySelector('div#game-container') as HTMLDivElement;
+const powerUpsContainer = document.querySelector('div#powerups') as HTMLDivElement;
 
 interface PowerUp {
   name: string;
   description: string;
   activate(game: Game, player: Player): void;
-  passive: boolean;
+  hotkey?: string;
 }
 
 const teleport: PowerUp = {
   name: 'Teleport',
   description: 'Instantly move to any position on the map.',
-  passive: false,
+  hotkey: 't',
   activate: (game, player) => {
     player.setPos({ x: Math.floor(Math.random() * game.getMapWidth()), y: Math.floor(Math.random() * game.getMapHeight()) });
   },
@@ -26,7 +27,6 @@ const teleport: PowerUp = {
 const moveIncrease: PowerUp = {
   name: 'Move Increase',
   description: 'Increase available moves by 5.',
-  passive: true,
   activate: (game, player) => {
     game.incMoveLimit(5);
   },
@@ -35,14 +35,14 @@ const moveIncrease: PowerUp = {
 const growPlants: PowerUp = {
   name: 'Grow Plants',
   description: 'Grows a fruit.',
-  passive: false,
+  hotkey: 'r',
   activate: (game, player) => {},
 };
 
 const multiCollect: PowerUp = {
   name: 'Multi Collect',
   description: 'Collect fruits from all adjacent tiles.',
-  passive: false,
+  hotkey: 'e',
   activate: (game, player) => {},
 };
 
@@ -80,6 +80,25 @@ function preloadImages(imagePaths: string[]) {
 function cssSrc(src: string): string {
   imagePaths.push(src);
   return `url('${src}')`;
+}
+
+const grassSprite = () => cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 3)}.png`);
+const powerUpSprite = (name: string) => name.replaceAll(' ', '').toLowerCase();
+
+function createPowerUpButton(idx: number, hotkey: string, src: string, alt: string): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.classList.add('rounded-full', 'hover:bg-zinc-900');
+  button.title = `Hotkey: ${hotkey}`;
+  button.addEventListener('click', () => {
+    player!.activatePowerUp(idx);
+    button.remove();
+  });
+  const img = document.createElement('img');
+  img.classList.add('w-20');
+  img.src = `imgs/assets/powerups/${src}.png`;
+  img.alt = alt;
+  button.appendChild(img);
+  return button;
 }
 
 function weightedRandom(probabilities: LootWeights): string {
@@ -151,7 +170,6 @@ class Game {
 
   public restoreMap() {
     this.map = deepClone(this.mapBlueprint);
-    console.log(this.map);
     this.drawMap();
     updateUI();
   }
@@ -164,18 +182,17 @@ class Game {
       for (let x = -1; x <= this.width; x++) {
         if (x === -1 || x === this.width || y === -1 || y === this.height) {
           const cell = document.createElement('div');
-          cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
+          cell.style.backgroundImage = grassSprite();
           cell.appendChild(this.createDecor(this.getBorderType(x, y), 'fences'));
           gameMapElement.appendChild(cell);
         } else {
           const item = this.getItemAt({ x, y });
           const cell = this.createCell({ x, y });
+          cell.style.backgroundImage = grassSprite();
           if (!item) {
-            cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
-            if (Math.floor(Math.random() * 10) > 3) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
+            if (Math.floor(Math.random() * 10) > 2) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
           } else if (isPowerUp(item)) {
-            cell.style.backgroundImage = cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 1) + 1}.png`);
-            cell.appendChild(this.createDecor(item.name.replaceAll(' ', '').toLowerCase(), 'item', 'powerups'));
+            cell.appendChild(this.createDecor(powerUpSprite(item.name), 'item', 'powerups'));
           } else {
             cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
             cell.appendChild(this.createDecor(item.amount, 'item', item.flavor));
@@ -361,14 +378,29 @@ class Player {
     return this.pos.x === otherPos.x && this.pos.y === otherPos.y;
   }
 
+  public handleHotkey(key: string): void {
+    const powerUpIndex = this.powerUps.findIndex((item) => item.hotkey === key);
+    if (powerUpIndex === -1) return;
+    this.activatePowerUp(powerUpIndex);
+  }
+
+  public activatePowerUp(index: number): void {
+    this.powerUps[index].activate(game, this);
+    this.powerUps.splice(index, 1);
+    updateUI();
+  }
+
   public addPowerUp(powerUp: PowerUp) {
-    console.log(powerUp);
-    if (powerUp.passive) powerUp.activate(game, this);
+    if (powerUp.hotkey === undefined) powerUp.activate(game, this);
     else this.powerUps.push(powerUp);
+  }
+
+  public getPowerUps(): PowerUp[] {
+    return this.powerUps;
   }
 }
 
-function updateUI() {
+function updateUI(): void {
   movesLeftElement.textContent = (player ? game.getMoveLimit() - player.getMoveCount() : game.getMoveLimit()).toString();
   fruitsCollectedElement.textContent = (player ? player.getFruitsCollected() : 0).toString();
   const plr = document.getElementById('player') || document.createElement('div');
@@ -385,6 +417,13 @@ function updateUI() {
       plr.style.backgroundImage = cssSrc(`imgs/assets/player.gif`);
       cell.appendChild(plr);
     }
+  }
+  if (player === undefined) return;
+  powerUpsContainer.innerHTML = '';
+  const powerUps = player.getPowerUps();
+  for (let i = 0; i < powerUps.length; i++) {
+    const powerUp = powerUps[i];
+    powerUpsContainer.appendChild(createPowerUpButton(i, powerUp.hotkey ?? '', powerUpSprite(powerUp.name), powerUp.name));
   }
 }
 
@@ -408,6 +447,13 @@ window.addEventListener('keydown', (e) => {
       player.move(1, 0);
       break;
   }
+  if (
+    powerUpTypes
+      .map((item) => item.hotkey)
+      .filter((item) => item !== undefined)
+      .includes(e.key.toLowerCase())
+  )
+    player.handleHotkey(e.key);
   updateUI();
 });
 
