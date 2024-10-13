@@ -12,6 +12,7 @@ interface PowerUp {
   name: string;
   description: string;
   activate(game: Game, player: Player): void;
+  selectable: boolean;
   hotkey?: string;
 }
 
@@ -20,8 +21,10 @@ const teleport: PowerUp = {
   description: 'Instantly move to any position on the map.',
   hotkey: 't',
   activate: (game, player) => {
-    player.setPos({ x: Math.floor(Math.random() * game.getMapWidth()), y: Math.floor(Math.random() * game.getMapHeight()) });
+    player.setPos(game.getSelected() ?? game.getRandomPos());
+    game.removeSelected();
   },
+  selectable: true,
 };
 
 const moveIncrease: PowerUp = {
@@ -30,6 +33,7 @@ const moveIncrease: PowerUp = {
   activate: (game, player) => {
     game.incMoveLimit(5);
   },
+  selectable: false,
 };
 
 const growPlants: PowerUp = {
@@ -37,11 +41,10 @@ const growPlants: PowerUp = {
   description: 'Grows a fruit.',
   hotkey: 'r',
   activate: (game, player) => {
-    game.growFruit(
-      { x: Math.floor(Math.random() * game.getMapWidth()), y: Math.floor(Math.random() * game.getMapHeight()) },
-      Math.floor(Math.random() * 3) + 2,
-    );
+    game.growFruit(game.getSelected() ?? game.getRandomPos(), Math.floor(Math.random() * 3) + 2);
+    game.removeSelected();
   },
+  selectable: true,
 };
 
 const multiCollect: PowerUp = {
@@ -54,6 +57,7 @@ const multiCollect: PowerUp = {
       if (item !== undefined) player.collectItemAt(pos);
     });
   },
+  selectable: false,
 };
 
 const powerUpTypes = [teleport, moveIncrease, growPlants, multiCollect];
@@ -80,16 +84,17 @@ function cssSrc(src: string): string {
   return `url('${src}')`;
 }
 
-const grassSprite = () => cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 3)}.png`);
-const powerUpSprite = (name: string) => name.replaceAll(' ', '').toLowerCase();
+const grassSprite = (): string => cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 3)}.png`);
+const powerUpSprite = (name: string): string => name.replaceAll(' ', '').toLowerCase();
 
 function createPowerUpButton(idx: number, hotkey: string, src: string, alt: string): HTMLButtonElement {
   const button = document.createElement('button');
   button.classList.add('rounded-full', 'hover:bg-zinc-900');
+  if (player!.getSelectedPowerUpIdx() === idx) button.classList.add('selected');
   button.title = `Hotkey: ${hotkey}`;
   button.addEventListener('click', () => {
-    player!.activatePowerUp(idx);
-    button.remove();
+    if (player!.activatePowerUp(idx)) button.remove();
+    updateUI();
   });
   const img = document.createElement('img');
   img.classList.add('w-20');
@@ -111,12 +116,11 @@ function weightedRandom(probabilities: LootWeights): string {
   return keys[0];
 }
 
-function handleCellClick(x: number, y: number) {
-  if (!player) {
-    player = new Player({ x, y });
-    console.log(`Player created at: (${x}, ${y})`);
-    updateUI();
-  }
+function handleCellClick(x: number, y: number): void {
+  const pos = { x, y };
+  if (!player) player = new Player(pos);
+  else game.selectCell(pos);
+  updateUI();
 }
 
 function getRandomElement<T>(array: T[]): T | undefined {
@@ -140,6 +144,7 @@ class Game {
   private mapBlueprint: GameMap = [];
   private lootWeights: LootWeights;
   private hasEnded = false;
+  private selectedCell?: Vec2;
 
   constructor(width: number, height: number, moveLimit: number, lootWeights: LootWeights) {
     this.width = width;
@@ -340,6 +345,27 @@ class Game {
   public incMoveLimit(amount: number = 1): void {
     this.moveLimit += amount;
   }
+
+  public getRandomPos(): Vec2 {
+    return { x: Math.floor(Math.random() * game.getMapWidth()), y: Math.floor(Math.random() * game.getMapHeight()) };
+  }
+
+  public selectCell(pos: Vec2): void {
+    if (player!.getSelectedPowerUpIdx() === undefined) return;
+    const shouldRemove = JSON.stringify(this.selectedCell) === JSON.stringify(pos);
+    this.removeSelected();
+    if (shouldRemove) return;
+    this.selectedCell = pos;
+    player!.triggerSelected();
+  }
+
+  public removeSelected(): void {
+    this.selectedCell = undefined;
+  }
+
+  public getSelected(): Vec2 | undefined {
+    return this.selectedCell;
+  }
 }
 
 class Player {
@@ -347,10 +373,12 @@ class Player {
   private moveCount = 0;
   private fruitsCollected = 0;
   private powerUps: PowerUp[] = [];
+  private selectedPowerUpIdx?: number;
 
   constructor(pos: Vec2) {
     this.pos = pos;
     this.collectItemAt(pos);
+    updateUI();
   }
 
   public getPos(): Vec2 {
@@ -359,6 +387,7 @@ class Player {
 
   public setPos(pos: Vec2): Vec2 {
     this.pos = pos;
+    this.collectItemAt(pos);
     return this.pos;
   }
 
@@ -407,10 +436,23 @@ class Player {
     this.activatePowerUp(powerUpIndex);
   }
 
-  public activatePowerUp(index: number): void {
-    this.powerUps[index].activate(game, this);
+  public triggerSelected(): void {
+    if (this.selectedPowerUpIdx === undefined) return;
+    this.activatePowerUp(this.selectedPowerUpIdx, true);
+    game.removeSelected();
+    this.selectedPowerUpIdx = undefined;
+  }
+
+  public activatePowerUp(index: number, trigger: boolean = false): boolean {
+    const powerUp = this.powerUps[index];
+    if (powerUp.selectable && !trigger) {
+      this.selectPowerUp(index);
+      return false;
+    }
+    powerUp.activate(game, this);
     this.powerUps.splice(index, 1);
     updateUI();
+    return true;
   }
 
   public addPowerUp(powerUp: PowerUp) {
@@ -420,6 +462,14 @@ class Player {
 
   public getPowerUps(): PowerUp[] {
     return this.powerUps;
+  }
+
+  public selectPowerUp(index: number) {
+    this.selectedPowerUpIdx = this.selectedPowerUpIdx === index ? undefined : index;
+  }
+
+  public getSelectedPowerUpIdx(): number | undefined {
+    return this.selectedPowerUpIdx;
   }
 }
 
