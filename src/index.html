@@ -13,14 +13,21 @@
     <header class="flex text-white bg-zinc-900">
       <a class="p-8 hover:text-zinc-400" href="index.html">Játék</a>
     </header>
-    <div class="flex flex-col items-center justify-center flex-1 m-8">
-      <div class="flex flex-col items-center justify-center gap-16 text-center" id="menu-container">
-        <div>
-          <h1 class="text-6xl font-bold">Játék</h1>
-          <p class="text-2xl font-bold">A jatek celja descriptip stbstb</p>
-        </div>
-        <div>
-          <button class="text-3xl button" id="start">Start</button>
+    <div class="flex flex-col items-center flex-1 m-8">
+      <div class="flex flex-col items-center justify-center flex-1 w-full text-center md:mt-[20svh]" id="menu-container">
+        <div class="grid flex-1 w-full grid-cols-1 gap-4 md:grid-cols-3">
+          <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
+            <h2 class="text-5xl font-bold">Gyorstalpalo</h2>
+            <p class="text-2xl">A jatek celja descriptip stbstb</p>
+          </div>
+          <div class="flex flex-col items-center justify-start gap-16">
+            <h1 class="text-6xl font-bold">Játék</h1>
+            <button class="text-3xl button" id="start">Start</button>
+          </div>
+          <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
+            <h2 class="text-5xl font-bold">Powerups</h2>
+            <div class="grid grid-cols-2" id="powerup-info"></div>
+          </div>
         </div>
       </div>
       <div class="flex flex-col items-center justify-center !hidden gap-8 w-fit" id="game-container">

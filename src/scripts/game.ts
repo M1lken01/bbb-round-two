@@ -6,6 +6,7 @@ const gameContainer = document.querySelector('div#game-container') as HTMLDivEle
 const powerUpsContainer = document.querySelector('div#powerups') as HTMLDivElement;
 const scoreSpan = document.querySelector('#score>span')!;
 const movesLeftSpan = document.querySelector('#moves>span')!;
+const powerUpsInfo = document.querySelector('div#powerup-info')!;
 
 interface PowerUp {
   name: string;
@@ -107,6 +108,25 @@ function createPowerUpButton(idx: number, hotkey: string, src: string, alt: stri
   return button;
 }
 
+function createPowerUpInfo(title: string, desc: string, imgSrc: string): HTMLElement {
+  const wrapperDiv = document.createElement('div');
+  wrapperDiv.classList.add('flex', 'flex-col', 'items-center', 'justify-start');
+  const img = document.createElement('img');
+  img.classList.add('h-32', 'w-32', 'pixelated');
+  img.src = imgSrc;
+  img.alt = title;
+  const h2 = document.createElement('h2');
+  h2.classList.add('text-4xl', 'font-bold');
+  h2.textContent = title;
+  const p = document.createElement('p');
+  p.classList.add('text-2xl');
+  p.textContent = desc;
+  wrapperDiv.appendChild(img);
+  wrapperDiv.appendChild(h2);
+  wrapperDiv.appendChild(p);
+  return wrapperDiv;
+}
+
 function weightedRandom(probabilities: LootWeights): string {
   const keys = Object.keys(probabilities);
   const weights = Object.values(probabilities);
@@ -143,6 +163,7 @@ class Game {
   private width: number;
   private height: number;
   private moveLimit: number;
+  private initialMoveLimit: number;
   private map: GameMap = [];
   private mapBlueprint: GameMap = [];
   private lootWeights: LootWeights;
@@ -153,6 +174,7 @@ class Game {
     this.width = width;
     this.height = height;
     this.moveLimit = moveLimit;
+    this.initialMoveLimit = moveLimit;
     this.lootWeights = lootWeights;
     this.generateMap();
   }
@@ -338,7 +360,7 @@ class Game {
   public endGame(): void {
     this.hasEnded = true;
     const score = player!.getFruitsCollected();
-    let highScoreText = '';
+    let highScoreText = `. current high score is ${getHighScore().toString()}`;
     if (score > getHighScore()) {
       setHighScore(score);
       highScoreText = ' new high score!';
@@ -348,6 +370,7 @@ class Game {
 
   public startGame(): void {
     this.hasEnded = false;
+    this.moveLimit = this.initialMoveLimit;
   }
 
   public isOver(): boolean {
@@ -553,14 +576,20 @@ document.querySelector('button#start')!.addEventListener('click', () => {
 
 document.querySelector('button#retry')!.addEventListener('click', () => {
   player = undefined;
+  game.startGame();
   game.restoreMap();
 });
 
 document.querySelector('button#reset')!.addEventListener('click', () => {
-  console.log('wip');
+  window.location.reload();
 });
 
 const game = new Game(15, 12, 30, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
 let player: Player | undefined;
 
 preloadImages(imagePaths);
+
+powerUpsInfo.innerHTML = '';
+powerUpTypes.forEach((powerUp) => {
+  powerUpsInfo.appendChild(createPowerUpInfo(powerUp.name, powerUp.description, `imgs/assets/powerups/${powerUpSprite(powerUp.name)}.png`));
+});

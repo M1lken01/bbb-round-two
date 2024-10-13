@@ -62,7 +62,8 @@ footer img {
   @apply z-10 outline outline-4 outline-red-600;
 }
 
-#powerups img {
+#powerups img,
+.pixelated {
   image-rendering: pixelated;
 }
 
