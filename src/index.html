@@ -18,7 +18,7 @@
         <div class="grid flex-1 w-full grid-cols-1 gap-4 md:grid-cols-3">
           <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
             <h2 class="text-5xl font-bold">Gyorstalpaló</h2>
-            <div class="flex gap-16 text-left">
+            <div class="flex flex-wrap gap-16 text-left md:flex-nowrap">
               <div>
                 <h3 class="mb-4 text-4xl font-bold">Leírás</h3>
                 <p class="text-2xl text-justify">
@@ -40,6 +40,19 @@
           </div>
           <div class="flex flex-col items-center justify-start gap-16">
             <h1 class="text-6xl font-bold">Játék</h1>
+            <div class="w-full">
+              <h3 class="mb-4 text-2xl font-bold">Nehézség</h3>
+              <div class="flex mx-2 lg:mx-32 md:mx-16">
+                <div class="flex flex-col flex-1 text-1xl">
+                  <input type="range" name="difficulty" id="difficulty" min="0" max="2" value="1" step="1" />
+                  <div class="flex justify-between">
+                    <p>Konnyű</p>
+                    <p>Normál</p>
+                    <p>Nehéz</p>
+                  </div>
+                </div>
+              </div>
+            </div>
             <button class="text-3xl button" id="start">Start</button>
           </div>
           <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
@@ -50,8 +63,8 @@
       </div>
       <div class="flex flex-col items-center justify-center !hidden gap-8 w-fit" id="game-container">
         <div id="game" class="grid border-8 border-solid w-max border-zinc-950"></div>
-        <div class="grid w-full grid-cols-6 grid-rows-2">
-          <div class="col-span-5">
+        <div class="grid w-full grid-cols-5 grid-rows-2">
+          <div class="col-span-4">
             <h2 class="text-3xl" id="score">Gyűjtött gyümölcsök: <span>0</span></h2>
             <h2 class="text-3xl" id="moves">Maradt lépésekkel: <span>0</span></h2>
           </div>
@@ -61,7 +74,7 @@
           <div class="flex items-center h-20">
             <h2 class="text-3xl">Képességek:</h2>
           </div>
-          <div class="flex col-span-4">
+          <div class="flex col-span-3">
             <div class="flex" id="powerups"></div>
           </div>
           <div class="flex justify-end">

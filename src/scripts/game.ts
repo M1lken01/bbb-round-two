@@ -78,6 +78,7 @@ type LootWeights = { [key: string]: number };
 type Item = Fruit | PowerUp | undefined;
 type GameMapRow = Array<Item>;
 type GameMap = Array<GameMapRow>;
+const mapSize = [15, 12];
 const difficulties = {
   hard: { moveLimit: 20, fixedPowerUps: [], extraPowerUps: 2, fruitRate: 1 / 5, fruitAmounts: [10, 8, 6, 4, 2, 1] },
   normal: { moveLimit: 30, fixedPowerUps: [...powerUpTypes], extraPowerUps: 2, fruitRate: 2 / 5, fruitAmounts: [7, 5, 3, 2, 1, 1] },
@@ -601,6 +602,11 @@ window.addEventListener('keydown', (e) => {
 });
 
 document.querySelector('button#start')!.addEventListener('click', () => {
+  const chosenDifficulty = ['easy', 'normal', 'hard'][parseInt((document.querySelector('input#difficulty') as HTMLInputElement).value)] as
+    | 'easy'
+    | 'normal'
+    | 'hard';
+  if (chosenDifficulty !== 'normal') game = new Game(mapSize[0], mapSize[1], difficulties[chosenDifficulty]);
   gameContainer.classList.remove('!hidden');
   menuContainer.classList.add('!hidden');
   updateUI();
@@ -616,7 +622,7 @@ document.querySelector('button#reset')!.addEventListener('click', () => {
   window.location.reload();
 });
 
-const game = new Game(15, 12, difficulties.normal);
+let game = new Game(mapSize[0], mapSize[1], difficulties.normal);
 let player: Player | undefined;
 
 preloadImages(imagePaths);
