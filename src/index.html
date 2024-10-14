@@ -17,15 +17,33 @@
       <div class="flex flex-col items-center justify-center flex-1 w-full text-center md:mt-[20svh]" id="menu-container">
         <div class="grid flex-1 w-full grid-cols-1 gap-4 md:grid-cols-3">
           <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
-            <h2 class="text-5xl font-bold">Gyorstalpalo</h2>
-            <p class="text-2xl">A jatek celja descriptip stbstb</p>
+            <h2 class="text-5xl font-bold">Gyorstalpaló</h2>
+            <div class="flex gap-16 text-left">
+              <div>
+                <h3 class="mb-4 text-4xl font-bold">Leírás</h3>
+                <p class="text-2xl text-justify">
+                  Játék indításakor egy véletlenszerű kert lesz előtted gyümölcsökkel (mezőnkként 1-6) és képességekkel. A kör elején bármelyik mezőre leteheted
+                  a karakteredet és a célod hogy minél több gyümölcsöt gyűts össze az adott lépésekkel. A kör végen újra próbálkozhatsz abban a kertben újra
+                  vagy akár 1 teljesen másik kertben.
+                </p>
+              </div>
+              <div>
+                <h3 class="mb-4 text-4xl font-bold">Irányítás</h3>
+                <ul class="text-2xl">
+                  <li>Fel: <kbd>W</kbd>&sol;<kbd>&uparrow;</kbd></li>
+                  <li>Le: <kbd>S</kbd>&sol;<kbd>&downarrow;</kbd></li>
+                  <li>Jobb: <kbd>D</kbd>&sol;<kbd>&rightarrow;</kbd></li>
+                  <li>Bal: <kbd>A</kbd>&sol;<kbd>&leftarrow;</kbd></li>
+                </ul>
+              </div>
+            </div>
           </div>
           <div class="flex flex-col items-center justify-start gap-16">
             <h1 class="text-6xl font-bold">Játék</h1>
             <button class="text-3xl button" id="start">Start</button>
           </div>
           <div class="flex flex-col items-center justify-start gap-16 md:mt-8">
-            <h2 class="text-5xl font-bold">Powerups</h2>
+            <h2 class="text-5xl font-bold">Képességek</h2>
             <div class="grid grid-cols-2" id="powerup-info"></div>
           </div>
         </div>
@@ -34,20 +52,20 @@
         <div id="game" class="grid border-8 border-solid w-max border-zinc-950"></div>
         <div class="grid w-full grid-cols-6 grid-rows-2">
           <div class="col-span-5">
-            <h2 class="text-3xl" id="score">Score: <span>0</span></h2>
-            <h2 class="text-3xl" id="moves">Moves Left: <span>0</span></h2>
+            <h2 class="text-3xl" id="score">Gyűjtött gyümölcsök: <span>0</span></h2>
+            <h2 class="text-3xl" id="moves">Maradt lépésekkel: <span>0</span></h2>
           </div>
           <div class="flex justify-end">
-            <button id="retry" class="w-full my-2 text-3xl button">retry</button>
+            <button id="retry" class="w-full my-2 text-2xl button">Újra próbálkozás</button>
           </div>
           <div class="flex items-center h-20">
-            <h2 class="text-3xl">Power ups:</h2>
+            <h2 class="text-3xl">Képességek:</h2>
           </div>
           <div class="flex col-span-4">
             <div class="flex" id="powerups"></div>
           </div>
           <div class="flex justify-end">
-            <button id="reset" class="w-full my-2 text-3xl button">new game</button>
+            <button id="reset" class="w-full my-2 text-2xl button">Új játék</button>
           </div>
         </div>
       </div>

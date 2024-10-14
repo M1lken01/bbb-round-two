@@ -73,7 +73,11 @@ footer img {
 }
 
 #player {
-  @apply z-50 bottom-4;
+  @apply z-40 bottom-4;
+}
+
+.rain {
+  @apply z-50 opacity-60;
 }
 
 .easteregg {

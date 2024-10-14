@@ -11,6 +11,7 @@ const powerUpsInfo = document.querySelector('div#powerup-info')!;
 interface PowerUp {
   name: string;
   description: string;
+  sprite: string;
   activate(game: Game, player: Player): boolean;
   selectable: boolean;
   hotkey?: string;
@@ -18,7 +19,8 @@ interface PowerUp {
 
 const teleport: PowerUp = {
   name: 'Teleport',
-  description: 'Instantly move to any position on the map.',
+  description: 'Bármelyik mezőre ugorhatsz 1 kattintással. Manuálisan aktiválható.',
+  sprite: 'teleport',
   hotkey: 't',
   activate: (game, player): boolean => {
     player.setPos(game.getSelected() ?? game.getRandomPos());
@@ -29,8 +31,9 @@ const teleport: PowerUp = {
 };
 
 const moveIncrease: PowerUp = {
-  name: 'Move Increase',
-  description: 'Increase available moves by 5.',
+  name: 'Lépés Növelés',
+  description: 'A maradék lépéseid száma 5-tel növekszik. Automatikusan aktiválódik.',
+  sprite: 'move_increase',
   activate: (game, player): boolean => {
     game.incMoveLimit(5);
     return true;
@@ -39,8 +42,9 @@ const moveIncrease: PowerUp = {
 };
 
 const growPlants: PowerUp = {
-  name: 'Grow Plants',
-  description: 'Grows a fruit.',
+  name: 'Gyümölcs Növelő',
+  description: 'A kattintott mezőn lévő gyümölcsök száma növekszik. Manuálisan aktiválható.',
+  sprite: 'grow_plants',
   hotkey: 'r',
   activate: (game, player): boolean => {
     const pos = game.getSelected() ?? game.getRandomPos();
@@ -53,8 +57,9 @@ const growPlants: PowerUp = {
 };
 
 const multiCollect: PowerUp = {
-  name: 'Multi Collect',
-  description: 'Collect fruits from all adjacent tiles.',
+  name: 'Betakarítás',
+  description: 'A körülötted lévő gyümölcsöket össze gyűjtöd. Manuálisan aktiválható.',
+  sprite: 'multi_collect',
   hotkey: 'e',
   activate: (game, player): boolean => {
     game.getNeighborPositions(player.getPos()).forEach((pos) => {
@@ -67,15 +72,20 @@ const multiCollect: PowerUp = {
 
 const powerUpTypes = [teleport, moveIncrease, growPlants, multiCollect];
 const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
-type Fruit = { flavor?: (typeof fruitFlavors)[number]; amount: number };
+type Fruit = { flavor: (typeof fruitFlavors)[number]; amount: number };
 type Vec2 = { x: number; y: number };
 type LootWeights = { [key: string]: number };
 type Item = Fruit | PowerUp | undefined;
 type GameMapRow = Array<Item>;
 type GameMap = Array<GameMapRow>;
+const difficulties = {
+  hard: { moveLimit: 20, fixedPowerUps: [], extraPowerUps: 2, fruitRate: 1 / 5, fruitAmounts: [10, 8, 6, 4, 2, 1] },
+  normal: { moveLimit: 30, fixedPowerUps: [...powerUpTypes], extraPowerUps: 2, fruitRate: 2 / 5, fruitAmounts: [7, 5, 3, 2, 1, 1] },
+  easy: { moveLimit: 40, fixedPowerUps: [...powerUpTypes], extraPowerUps: 4, fruitRate: 3 / 5, fruitAmounts: [6, 5, 4, 3, 2, 1] },
+};
 
 const isFruit = (item: Item): item is Fruit => item !== undefined && 'flavor' in item;
-const isPowerUp = (item: Item): item is PowerUp => item !== undefined && 'name' in item;
+const isPowerUp = (item: Item): item is PowerUp => item !== undefined && 'sprite' in item;
 
 let imagePaths: string[] = [];
 function preloadImages(imagePaths: string[]): void {
@@ -89,7 +99,6 @@ function cssSrc(src: string): string {
 }
 
 const grassSprite = (): string => cssSrc(`imgs/assets/grass/${Math.floor(Math.random() * 3)}.png`);
-const powerUpSprite = (name: string): string => name.replaceAll(' ', '').toLowerCase();
 
 function createPowerUpButton(idx: number, hotkey: string, src: string, alt: string): HTMLButtonElement {
   const button = document.createElement('button');
@@ -116,7 +125,7 @@ function createPowerUpInfo(title: string, desc: string, imgSrc: string): HTMLEle
   img.src = imgSrc;
   img.alt = title;
   const h2 = document.createElement('h2');
-  h2.classList.add('text-4xl', 'font-bold');
+  h2.classList.add('text-4xl', 'font-bold', 'mb-4');
   h2.textContent = title;
   const p = document.createElement('p');
   p.classList.add('text-2xl');
@@ -127,16 +136,15 @@ function createPowerUpInfo(title: string, desc: string, imgSrc: string): HTMLEle
   return wrapperDiv;
 }
 
-function weightedRandom(probabilities: LootWeights): string {
-  const keys = Object.keys(probabilities);
-  const weights = Object.values(probabilities);
-  const random = Math.random() * weights.reduce((sum, weight) => sum + weight, 0);
+function weightedRandom<T>(items: T[], weights: number[]): T {
+  const cumulativeWeights = weights.reduce((acc, weight) => acc + weight, 0);
+  const randomIndex = (Math.random() * cumulativeWeights) | 0;
   let cumulativeWeight = 0;
-  for (let i = 0; i < keys.length; i++) {
+  for (let i = 0; i < items.length; i++) {
     cumulativeWeight += weights[i];
-    if (random <= cumulativeWeight) return keys[i];
+    if (randomIndex < cumulativeWeight) return items[i];
   }
-  return keys[0];
+  return items[items.length - 1];
 }
 
 function handleCellClick(x: number, y: number): void {
@@ -160,40 +168,58 @@ function deepClone(obj: any): any {
 }
 
 class Game {
+  private difficulty = { moveLimit: 0, fixedPowerUps: [...powerUpTypes], extraPowerUps: 2, fruitRate: 2 / 5, fruitAmounts: [7, 5, 3, 2, 1, 1] };
   private width: number;
   private height: number;
   private moveLimit: number;
   private initialMoveLimit: number;
   private map: GameMap = [];
   private mapBlueprint: GameMap = [];
-  private lootWeights: LootWeights;
   private hasEnded = false;
   private selectedCell?: Vec2;
 
-  constructor(width: number, height: number, moveLimit: number, lootWeights: LootWeights) {
+  constructor(width: number, height: number, difficulty: any) {
+    this.difficulty = difficulty;
     this.width = width;
     this.height = height;
-    this.moveLimit = moveLimit;
-    this.initialMoveLimit = moveLimit;
-    this.lootWeights = lootWeights;
+    this.moveLimit = this.difficulty.moveLimit;
+    this.initialMoveLimit = this.moveLimit;
     this.generateMap();
   }
 
-  public generateMap() {
-    this.map = [];
-    for (let y = 0; y < this.height; y++) {
-      const row: GameMapRow = [];
-      for (let x = 0; x < this.width; x++) {
-        const result = weightedRandom(this.lootWeights);
-        let item;
-        if (result === 'powerup') item = getRandomElement(powerUpTypes);
-        else if (result !== '0') item = { flavor: fruitFlavors[Math.floor(Math.random() * fruitFlavors.length)], amount: parseInt(result) };
-        row.push(item);
-      }
-      this.map.push(row);
+  private generateMap(): GameMap {
+    const tokens: Item[] = [...this.difficulty.fixedPowerUps];
+    const fruitCount = this.width * this.height * this.difficulty.fruitRate;
+    const emptyCount = this.width * this.height - fruitCount - this.difficulty.extraPowerUps - tokens.length;
+    for (let i = 0; i < fruitCount; i++) {
+      tokens.push({
+        flavor: fruitFlavors[Math.floor(Math.random() * fruitFlavors.length)],
+        amount: weightedRandom([1, 2, 3, 4, 5, 6], this.difficulty.fruitAmounts),
+      });
     }
+    for (let i = 0; i < this.difficulty.extraPowerUps; i++) {
+      tokens.push(powerUpTypes[Math.floor(Math.random() * powerUpTypes.length)]);
+    }
+    for (let i = 0; i < emptyCount; i++) {
+      tokens.push(undefined);
+    }
+    if (tokens.length !== this.width * this.height) console.error('Invalid map generator config!');
+    for (let i = tokens.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [tokens[i], tokens[j]] = [tokens[j], tokens[i]];
+    }
+    const newMap: GameMap = [];
+    for (let y = 0; y < this.height; y++) {
+      const row: Item[] = [];
+      for (let x = 0; x < this.width; x++) {
+        row.push(tokens.pop() || undefined);
+      }
+      newMap.push(row);
+    }
+    this.map = newMap;
     this.mapBlueprint = deepClone(this.map);
     this.drawMap();
+    return newMap;
   }
 
   public restoreMap() {
@@ -220,7 +246,7 @@ class Game {
           if (!item) {
             if (Math.floor(Math.random() * 10) > 2) cell.appendChild(this.createDecor(Math.floor(Math.random() * 12) + 1, 'foliage'));
           } else if (isPowerUp(item)) {
-            cell.appendChild(this.createDecor(powerUpSprite(item.name), 'item', 'powerups'));
+            cell.appendChild(this.createDecor(item.sprite, 'item', 'powerups'));
           } else {
             cell.style.backgroundImage = cssSrc(`imgs/assets/paths/single.png`);
             cell.appendChild(this.createDecor(item.amount, 'item', item.flavor));
@@ -360,12 +386,12 @@ class Game {
   public endGame(): void {
     this.hasEnded = true;
     const score = player!.getFruitsCollected();
-    let highScoreText = `. current high score is ${getHighScore().toString()}`;
+    let highScoreText = `. Eddigi rekord: ${getHighScore().toString()}!`;
     if (score > getHighScore()) {
+      highScoreText = `. Új rekord (régi: ${getHighScore().toString()})!`;
       setHighScore(score);
-      highScoreText = ' new high score!';
     }
-    setTimeout(() => alert(`Jateknak vege lett. Osszeszedett gyumolcsok szama: ${score}${highScoreText}`), 100);
+    setTimeout(() => alert(`Ideért a vihar. Összeszedett gyümölcsök száma: ${score}${highScoreText}`), 100);
   }
 
   public startGame(): void {
@@ -521,6 +547,12 @@ function updateUI(): void {
   for (let i = 0; i < cells.length; i++) {
     const cell = cells[i] as HTMLElement;
     const pos = { x: parseInt(cell.getAttribute('data-x')!), y: parseInt(cell.getAttribute('data-y')!) };
+    if (game.isOver() && !cell.querySelector('.rain')) {
+      const rain = document.createElement('div');
+      rain.classList.add('sprite', 'rain');
+      rain.style.backgroundImage = cssSrc(`imgs/assets/rain.gif`);
+      cell.appendChild(rain);
+    }
     if (player && player.comparePos(pos)) {
       const item = cell.querySelector('.item');
       if (item !== null) item.remove();
@@ -534,7 +566,7 @@ function updateUI(): void {
   const powerUps = player.getPowerUps();
   for (let i = 0; i < powerUps.length; i++) {
     const powerUp = powerUps[i];
-    powerUpsContainer.appendChild(createPowerUpButton(i, powerUp.hotkey ?? '', powerUpSprite(powerUp.name), powerUp.name));
+    powerUpsContainer.appendChild(createPowerUpButton(i, powerUp.hotkey ?? '', powerUp.sprite, powerUp.name));
   }
 }
 
@@ -584,12 +616,12 @@ document.querySelector('button#reset')!.addEventListener('click', () => {
   window.location.reload();
 });
 
-const game = new Game(15, 12, 30, { '0': 0.5, '1': 0.22, '2': 0.12, '3': 0.09, '4': 0.03, '5': 0.015, '6': 0.005, powerup: 0.02 });
+const game = new Game(15, 12, difficulties.normal);
 let player: Player | undefined;
 
 preloadImages(imagePaths);
 
 powerUpsInfo.innerHTML = '';
 powerUpTypes.forEach((powerUp) => {
-  powerUpsInfo.appendChild(createPowerUpInfo(powerUp.name, powerUp.description, `imgs/assets/powerups/${powerUpSprite(powerUp.name)}.png`));
+  powerUpsInfo.appendChild(createPowerUpInfo(powerUp.name, powerUp.description, `imgs/assets/powerups/${powerUp.sprite}.png`));
 });
