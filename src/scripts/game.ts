@@ -1,3 +1,4 @@
+console.info('%cFull source code can be found at\nhttps://github.com/M1lken01/bbb-round-two', 'color: yellow; font-size: 2rem;');
 const getHighScore = () => parseInt(localStorage.getItem('high-score') ?? '0');
 const setHighScore = (value: number) => localStorage.setItem('high-score', Math.floor(value).toString());
 const gameMap = document.querySelector('div#game') as HTMLDivElement;
@@ -17,64 +18,60 @@ interface PowerUp {
   hotkey?: string;
 }
 
-const teleport: PowerUp = {
-  name: 'Teleport',
-  description: 'Bármelyik mezőre ugorhatsz 1 kattintással. Manuálisan aktiválható.',
-  sprite: 'teleport',
-  hotkey: 't',
-  activate: (game, player): boolean => {
-    player.setPos(game.getSelected() ?? game.getRandomPos());
-    game.removeSelected();
-    return true;
+const powerUpTypes: PowerUp[] = [
+  {
+    name: 'Teleport',
+    description: 'Bármelyik mezőre ugorhatsz 1 kattintással. Manuálisan aktiválható.',
+    sprite: 'teleport',
+    hotkey: 't',
+    activate: (game, player): boolean => {
+      player.setPos(game.getSelected() ?? game.getRandomPos());
+      game.removeSelected();
+      return true;
+    },
+    selectable: true,
   },
-  selectable: true,
-};
-
-const moveIncrease: PowerUp = {
-  name: 'Lépés Növelés',
-  description: 'A maradék lépéseid száma 5-tel növekszik. Automatikusan aktiválódik.',
-  sprite: 'move_increase',
-  activate: (game, player): boolean => {
-    game.incMoveLimit(5);
-    return true;
+  {
+    name: 'Lépés Növelés',
+    description: 'A maradék lépéseid száma 5-tel növekszik. Automatikusan aktiválódik.',
+    sprite: 'move_increase',
+    activate: (game, player): boolean => {
+      game.incMoveLimit(5);
+      return true;
+    },
+    selectable: false,
   },
-  selectable: false,
-};
-
-const growPlants: PowerUp = {
-  name: 'Gyümölcs Növelő',
-  description: 'A kattintott mezőn lévő gyümölcsök száma növekszik. Manuálisan aktiválható.',
-  sprite: 'grow_plants',
-  hotkey: 'r',
-  activate: (game, player): boolean => {
-    const pos = game.getSelected() ?? game.getRandomPos();
-    if (!isFruit(game.getItemAt(pos))) return false;
-    game.growFruit(game.getSelected() ?? game.getRandomPos(), Math.floor(Math.random() * 3) + 2);
-    game.removeSelected();
-    return true;
+  {
+    name: 'Gyümölcs Növelő',
+    description: 'A kattintott mezőn lévő gyümölcsök száma növekszik. Manuálisan aktiválható.',
+    sprite: 'grow_plants',
+    hotkey: 'r',
+    activate: (game, player): boolean => {
+      const pos = game.getSelected() ?? game.getRandomPos();
+      if (!isFruit(game.getItemAt(pos))) return false;
+      game.growFruit(game.getSelected() ?? game.getRandomPos(), Math.floor(Math.random() * 3) + 2);
+      game.removeSelected();
+      return true;
+    },
+    selectable: true,
   },
-  selectable: true,
-};
-
-const multiCollect: PowerUp = {
-  name: 'Betakarítás',
-  description: 'A körülötted lévő gyümölcsöket össze gyűjtöd. Manuálisan aktiválható.',
-  sprite: 'multi_collect',
-  hotkey: 'e',
-  activate: (game, player): boolean => {
-    game.getNeighborPositions(player.getPos()).forEach((pos) => {
-      if (game.getItemAt(pos) !== undefined) player.collectItemAt(pos);
-    });
-    return true;
+  {
+    name: 'Betakarítás',
+    description: 'A körülötted lévő gyümölcsöket össze gyűjtöd. Manuálisan aktiválható.',
+    sprite: 'multi_collect',
+    hotkey: 'e',
+    activate: (game, player): boolean => {
+      game.getNeighborPositions(player.getPos()).forEach((pos) => {
+        if (game.getItemAt(pos) !== undefined) player.collectItemAt(pos);
+      });
+      return true;
+    },
+    selectable: false,
   },
-  selectable: false,
-};
-
-const powerUpTypes = [teleport, moveIncrease, growPlants, multiCollect];
+];
 const fruitFlavors = ['apple', 'pear', 'strawberry'] as const;
 type Fruit = { flavor: (typeof fruitFlavors)[number]; amount: number };
 type Vec2 = { x: number; y: number };
-type LootWeights = { [key: string]: number };
 type Item = Fruit | PowerUp | undefined;
 type GameMapRow = Array<Item>;
 type GameMap = Array<GameMapRow>;
@@ -573,24 +570,17 @@ function updateUI(): void {
 
 window.addEventListener('keydown', (e) => {
   if (!player) return;
-  switch (e.key) {
-    case 'ArrowUp':
-    case 'w':
-      player.move(0, -1);
-      break;
-    case 'ArrowDown':
-    case 's':
-      player.move(0, 1);
-      break;
-    case 'ArrowLeft':
-    case 'a':
-      player.move(-1, 0);
-      break;
-    case 'ArrowRight':
-    case 'd':
-      player.move(1, 0);
-      break;
-  }
+  const moveMap: { [key: string]: [number, number] } = {
+    ArrowUp: [0, -1],
+    w: [0, -1],
+    ArrowDown: [0, 1],
+    s: [0, 1],
+    ArrowLeft: [-1, 0],
+    a: [-1, 0],
+    ArrowRight: [1, 0],
+    d: [1, 0],
+  };
+  if (moveMap[e.key]) player.move(...moveMap[e.key]);
   if (
     powerUpTypes
       .map((item) => item.hotkey)
